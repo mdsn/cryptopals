@@ -150,16 +150,57 @@ fn challenge2() {
 }
 
 fn challenge3() {
+    let english_freq = [
+        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  // A-G
+        0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  // H-N
+        0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  // O-U
+        0.00978, 0.02360, 0.00150, 0.01974, 0.00074                     // V-Z
+    ];
     let hex =
         "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let payload = Bytes::from_hex(hex);
-    let keylen = payload.len();
-    for c in B64DIC.chars() {
-        let key = c.to_string().repeat(keylen);
+    let ascii = "abcdefghijklmnopqrstuvwxyz";
+
+    let mut scores = Vec::new();
+
+    for k in B64DIC.chars() {
+        let key = k.to_string().repeat(payload.len());
         let bytes = Bytes::from_str(&key);
         let result = payload.clone() ^ bytes;
-        println!("{}", result.to_string());
+
+        let mut ignored = 0;
+        let mut count = vec![0; ascii.len()];
+        let result_str = result.to_string();
+        for c in result_str.chars() {
+            if !c.is_ascii() {
+                continue
+            }
+
+            if !c.is_ascii_alphabetic() {
+                ignored += 1;
+                continue
+            }
+
+            let lower = c.to_ascii_lowercase();
+            let ix = ascii.find(lower).unwrap();
+            count[ix] += 1;
+        }
+
+        let str_len = result_str.len() - ignored;
+        let mut chi2 = 0.0;
+        for (i, &observed) in count.iter().enumerate() {
+            let expected = english_freq[i] * str_len as f32;
+            let difference = observed as f32 - expected;
+            chi2 += difference*difference / expected;
+        }
+
+        scores.push((chi2, result_str));
     }
+
+    scores.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    scores.iter().take(1).for_each(|(_, string)| {
+        println!("{}", string);
+    });
 }
 
 fn main() {
