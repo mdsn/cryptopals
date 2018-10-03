@@ -10,7 +10,7 @@ fn hex_val(h: char) -> u8 {
 }
 
 fn hex_char(val: u8) -> char {
-    assert!(0 <= val && val < 16);
+    assert!(val < 16);
     HEXDIC.chars().nth(val as usize).unwrap()
 }
 
@@ -34,6 +34,7 @@ fn b64_4th_sextet(bytes: &[u8]) -> u8 {
 
 struct Bytes { m: Vec<u8> }
 
+#[allow(dead_code)]
 impl Bytes {
     fn from_hex(hex: &str) -> Bytes {
         assert!(hex.len() % 2 == 0, "odd number of digits in hex string");
@@ -55,7 +56,7 @@ impl Bytes {
         Bytes { m: Vec::from(s) }
     }
 
-    fn b64encode(&self) -> String {
+    fn b64_encode(&self) -> String {
         let mut i: usize = 0;
         let mut b64 = String::new();
 
@@ -95,7 +96,7 @@ impl Bytes {
         b64
     }
 
-    fn to_hex_string(&self) -> String {
+    fn hex_encode(&self) -> String {
         let mut s = String::new();
         for &byte in self.m.iter() {
             let ls = byte & 0xf;
@@ -125,7 +126,7 @@ fn challenge1() {
                  696b65206120706f69736f6e6f7573206d757368726f6f6d";
     assert_eq!(
         "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t",
-        Bytes::from_hex(hex).b64encode()
+        Bytes::from_hex(hex).b64_encode()
     );
 }
 
@@ -136,7 +137,7 @@ fn challenge2() {
     let b1 = Bytes::from_hex(h1);
     let b2 = Bytes::from_hex(h2);
     let b3 = b1 ^ b2;
-    assert_eq!("746865206b696420646f6e277420706c6179", b3.to_hex_string());
+    assert_eq!("746865206b696420646f6e277420706c6179", b3.hex_encode());
 }
 
 fn main() {
