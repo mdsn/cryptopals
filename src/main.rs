@@ -36,6 +36,10 @@ struct Bytes { m: Vec<u8> }
 
 #[allow(dead_code)]
 impl Bytes {
+    fn len(&self) -> usize {
+        self.m.len()
+    }
+
     fn from_hex(hex: &str) -> Bytes {
         assert!(hex.len() % 2 == 0, "odd number of digits in hex string");
         let mut buf = Vec::new();
@@ -60,8 +64,8 @@ impl Bytes {
         let mut i: usize = 0;
         let mut b64 = String::new();
 
-        while i < self.m.len() {
-            let last_chunk = i + 3 > self.m.len();
+        while i < self.len() {
+            let last_chunk = i + 3 > self.len();
             let slice = if last_chunk {
                 &self.m[i..]
             } else {
@@ -106,13 +110,17 @@ impl Bytes {
         }
         s
     }
+
+    fn to_string(&self) -> String {
+        String::from_utf8(self.m.iter().cloned().collect()).unwrap()
+    }
 }
 
 impl BitXor for Bytes {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self {
-        assert_eq!(self.m.len(), rhs.m.len());
+        assert_eq!(self.len(), rhs.len());
         let bytes: Vec<u8> = self.m.iter()
             .zip(rhs.m.iter())
             .map(|(x, y)| x ^ y)
@@ -140,7 +148,16 @@ fn challenge2() {
     assert_eq!("746865206b696420646f6e277420706c6179", b3.hex_encode());
 }
 
+fn challenge3() {
+    let hex =
+        "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+    let bytes = Bytes::from_hex(hex);
+    let keylen = bytes.len();
+    println!("{}", keylen);
+}
+
 fn main() {
     challenge1();
     challenge2();
+    challenge3();
 }
