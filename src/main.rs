@@ -46,39 +46,33 @@ impl Bytes {
 
         while i < self.m.len() {
             let last_chunk = i + 3 > self.m.len();
-            let mut bytes = [0u8; 3];
-            // a byte triplet
             let slice = if last_chunk {
                 &self.m[i..]
             } else {
                 &self.m[i..i+3]
             };
 
-            if last_chunk {
+            let mut bytes = [0u8; 3];
+            for (i, &byte) in slice.iter().enumerate() {
+                bytes[i] = byte;
+            }
+
+            b64.push(b64_val(b64_1st_sextet(&bytes)));
+            b64.push(b64_val(b64_2nd_sextet(&bytes)));
+
+            if !last_chunk {
+                b64.push(b64_val(b64_3rd_sextet(&bytes)));
+                b64.push(b64_val(b64_4th_sextet(&bytes)));
+            } else {
                 let missing = 3 - slice.len();
 
-                for (i, &byte) in slice.iter().enumerate() {
-                    bytes[i] = byte;
-                }
-
                 if missing == 1 {
-                    b64.push(b64_val(b64_1st_sextet(&bytes)));
-                    b64.push(b64_val(b64_2nd_sextet(&bytes)));
                     b64.push(b64_val(b64_3rd_sextet(&bytes)));
                     b64.push('=');
                 } else {
-                    b64.push(b64_val(b64_1st_sextet(&bytes)));
-                    b64.push(b64_val(b64_2nd_sextet(&bytes)));
-                    b64.push('=');
-                    b64.push('=');
+                    b64.push_str("==");
                 }
-                break;
             }
-
-            b64.push(b64_val(b64_1st_sextet(slice)));
-            b64.push(b64_val(b64_2nd_sextet(slice)));
-            b64.push(b64_val(b64_3rd_sextet(slice)));
-            b64.push(b64_val(b64_4th_sextet(slice)));
 
             i += 3;
         }
