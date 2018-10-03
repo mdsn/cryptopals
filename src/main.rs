@@ -37,7 +37,6 @@ impl Bytes {
             let byte: u8 = hex_val(h1) << 4 | hex_val(h0);
             buf.push(byte); 
         }
-        // println!("{:?}", buf);
         Bytes { m: buf }
     }
 
@@ -51,18 +50,19 @@ impl Bytes {
                 let last = &self.m[i..];
                 let missing = 3 - last.len();
 
+                let mut bytes = [0u8; 3];
+                for (i, &byte) in last.iter().enumerate() {
+                    bytes[i] = byte;
+                }
+
                 if missing == 1 {
-                    b64.push(b64_val(b64_1st_sextet(last)));
-                    b64.push(b64_val(b64_2nd_sextet(last)));
-                    b64.push(b64_val(
-                        (last[1] & 0xf) << 2
-                    ));
+                    b64.push(b64_val(b64_1st_sextet(&bytes)));
+                    b64.push(b64_val(b64_2nd_sextet(&bytes)));
+                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
                     b64.push('=');
                 } else {
-                    b64.push(b64_val(b64_1st_sextet(last)));
-                    b64.push(b64_val(
-                        (last[0] & 0x3) << 2
-                    ));
+                    b64.push(b64_val(b64_1st_sextet(&bytes)));
+                    b64.push(b64_val(b64_2nd_sextet(&bytes)));
                     b64.push('=');
                     b64.push('=');
                 }
