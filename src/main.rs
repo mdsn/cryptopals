@@ -7,6 +7,11 @@ fn hex_val(h: char) -> u8 {
     HEXDIC.find(h).unwrap() as u8
 }
 
+fn hex_char(val: u8) -> char {
+    assert!(0 <= val && val < 16);
+    HEXDIC.chars().nth(val as usize).unwrap()
+}
+
 fn b64_val(sextet: u8) -> char {
     assert!((sextet as usize) < B64DIC.len());
     B64DIC.chars().nth(sextet as usize).unwrap()
@@ -83,15 +88,44 @@ impl Bytes {
 
         b64
     }
+
+    fn to_hex_string(&self) -> String {
+        let mut s = String::new();
+        for &byte in self.m.iter() {
+            let ls = byte & 0xf;
+            let ms = (byte & 0xf0) >> 4;
+            s.push(hex_char(ms));
+            s.push(hex_char(ls));
+        }
+        s
+    }
+}
+
+fn challenge1() {
+    let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
+                 696b65206120706f69736f6e6f7573206d757368726f6f6d";
+    assert_eq!(
+        "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t",
+        Bytes::from_hex(hex).b64encode()
+    );
+    assert_eq!(
+        hex, Bytes::from_hex(hex).to_hex_string());
+}
+
+fn challenge2() {
+    let expected = "746865206b696420646f6e277420706c6179";
+
+    let h1 = "1c0111001f010100061a024b53535009181c";
+    let h2 = "686974207468652062756c6c277320657965";
+
+    let b1 = Bytes::from_hex(h1);
+    let b2 = Bytes::from_hex(h2);
+
+    assert_eq!(h1, b1.to_hex_string());
+    assert_eq!(h2, b2.to_hex_string());
 }
 
 fn main() {
-    let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
-                 696b65206120706f69736f6e6f7573206d757368726f6f6d";
-    println!("{}", Bytes::from_hex(hex).b64encode());
-
-    let inputs = ["", "f", "fo", "foo", "foob", "fooba", "foobar"];
-    for &input in inputs.iter() {
-        println!("{}", Bytes::from_str(input).b64encode());
-    }
+    challenge1();
+    challenge2();
 }
