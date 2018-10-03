@@ -1,3 +1,5 @@
+use std::ops::BitXor;
+
 const B64DIC: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const HEXDIC: &str = "0123456789abcdef";
@@ -47,6 +49,10 @@ impl Bytes {
 
     fn from_str(s: &str) -> Bytes {
         Bytes { m: Vec::from(s.as_bytes()) }
+    }
+
+    fn from_slice(s: &[u8]) -> Bytes {
+        Bytes { m: Vec::from(s) }
     }
 
     fn b64encode(&self) -> String {
@@ -101,6 +107,19 @@ impl Bytes {
     }
 }
 
+impl BitXor for Bytes {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self {
+        assert_eq!(self.m.len(), rhs.m.len());
+        let bytes: Vec<u8> = self.m.iter()
+            .zip(rhs.m.iter())
+            .map(|(x, y)| x ^ y)
+            .collect();
+        Bytes::from_slice(&bytes)
+    }
+}
+
 fn challenge1() {
     let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
                  696b65206120706f69736f6e6f7573206d757368726f6f6d";
@@ -108,21 +127,16 @@ fn challenge1() {
         "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t",
         Bytes::from_hex(hex).b64encode()
     );
-    assert_eq!(
-        hex, Bytes::from_hex(hex).to_hex_string());
 }
 
 fn challenge2() {
-    let expected = "746865206b696420646f6e277420706c6179";
-
     let h1 = "1c0111001f010100061a024b53535009181c";
     let h2 = "686974207468652062756c6c277320657965";
 
     let b1 = Bytes::from_hex(h1);
     let b2 = Bytes::from_hex(h2);
-
-    assert_eq!(h1, b1.to_hex_string());
-    assert_eq!(h2, b2.to_hex_string());
+    let b3 = b1 ^ b2;
+    assert_eq!("746865206b696420646f6e277420706c6179", b3.to_hex_string());
 }
 
 fn main() {
