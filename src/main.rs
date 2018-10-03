@@ -45,13 +45,19 @@ impl Bytes {
         let mut b64 = String::new();
 
         while i < self.m.len() {
+            let last_chunk = i + 3 > self.m.len();
+            let mut bytes = [0u8; 3];
+            // a byte triplet
+            let slice = if last_chunk {
+                &self.m[i..]
+            } else {
+                &self.m[i..i+3]
+            };
 
-            if i + 3 > self.m.len() {
-                let last = &self.m[i..];
-                let missing = 3 - last.len();
+            if last_chunk {
+                let missing = 3 - slice.len();
 
-                let mut bytes = [0u8; 3];
-                for (i, &byte) in last.iter().enumerate() {
+                for (i, &byte) in slice.iter().enumerate() {
                     bytes[i] = byte;
                 }
 
@@ -69,12 +75,10 @@ impl Bytes {
                 break;
             }
 
-            // t: a byte triplet
-            let t = &self.m[i..i+3];
-            b64.push(b64_val(b64_1st_sextet(t)));
-            b64.push(b64_val(b64_2nd_sextet(t)));
-            b64.push(b64_val(b64_3rd_sextet(t)));
-            b64.push(b64_val(b64_4th_sextet(t)));
+            b64.push(b64_val(b64_1st_sextet(slice)));
+            b64.push(b64_val(b64_2nd_sextet(slice)));
+            b64.push(b64_val(b64_3rd_sextet(slice)));
+            b64.push(b64_val(b64_4th_sextet(slice)));
 
             i += 3;
         }
