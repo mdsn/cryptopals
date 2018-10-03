@@ -40,6 +40,10 @@ impl Bytes {
         Bytes { m: buf }
     }
 
+    fn from_str(s: &str) -> Bytes {
+        Bytes { m: Vec::from(s.as_bytes()) }
+    }
+
     fn b64encode(&self) -> String {
         let mut i: usize = 0;
         let mut b64 = String::new();
@@ -84,6 +88,8 @@ impl Bytes {
 fn main() {
     let input = "49276d206b696c6c696e6720796f757220627261696e206c\
                  696b65206120706f69736f6e6f7573206d757368726f6f6d";
-    let bytes = Bytes::from_hex(input);
-    println!("{}", bytes.b64encode());
+    let inputs = ["", "f", "fo", "foo", "foob", "fooba", "foobar"];
+    for &input in inputs.iter() {
+        println!("{}", Bytes::from_str(input).b64encode());
+    }
 }
