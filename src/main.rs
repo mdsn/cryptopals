@@ -86,8 +86,10 @@ impl Bytes {
 }
 
 fn main() {
-    let input = "49276d206b696c6c696e6720796f757220627261696e206c\
+    let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
                  696b65206120706f69736f6e6f7573206d757368726f6f6d";
+    println!("{}", Bytes::from_hex(hex).b64encode());
+
     let inputs = ["", "f", "fo", "foo", "foob", "fooba", "foobar"];
     for &input in inputs.iter() {
         println!("{}", Bytes::from_str(input).b64encode());
