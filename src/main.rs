@@ -12,8 +12,17 @@ fn b64_val(sextet: u8) -> char {
     B64DIC.chars().nth(sextet as usize).unwrap()
 }
 
-fn b64_first_sextet(bytes: &[u8]) -> u8 {
+fn b64_1st_sextet(bytes: &[u8]) -> u8 {
     (bytes[0] & 0xfc) >> 2
+}
+fn b64_2nd_sextet(bytes: &[u8]) -> u8 {
+    ((bytes[0] & 0x3) << 4) | ((bytes[1] & 0xf0) >> 4)
+}
+fn b64_3rd_sextet(bytes: &[u8]) -> u8 {
+    ((bytes[1] & 0xf) << 2) | ((bytes[2] & 0xc0) >> 6)
+}
+fn b64_4th_sextet(bytes: &[u8]) -> u8 {
+    bytes[2] & 0x3f
 }
 
 struct Bytes { m: Vec<u8> }
@@ -43,20 +52,14 @@ impl Bytes {
                 let missing = 3 - last.len();
 
                 if missing == 1 {
-                    b64.push(b64_val(
-                        (last[0] & 0xfc) >> 2
-                    ));
-                    b64.push(b64_val(
-                        (((last[0] & 0x3) << 2) | ((last[1] & 0xf0) >> 4))
-                    ));
+                    b64.push(b64_val(b64_1st_sextet(last)));
+                    b64.push(b64_val(b64_2nd_sextet(last)));
                     b64.push(b64_val(
                         (last[1] & 0xf) << 2
                     ));
                     b64.push('=');
                 } else {
-                    b64.push(b64_val(
-                        (last[0] & 0xfc) >> 2
-                    ));
+                    b64.push(b64_val(b64_1st_sextet(last)));
                     b64.push(b64_val(
                         (last[0] & 0x3) << 2
                     ));
@@ -68,16 +71,10 @@ impl Bytes {
 
             // t: a byte triplet
             let t = &self.m[i..i+3];
-            b64.push(b64_val(b64_first_sextet(t)));
-            b64.push(b64_val(
-                (((t[0] & 0x3) << 4) | ((t[1] & 0xf0) >> 4))
-            ));
-            b64.push(b64_val(
-                (((t[1] & 0xf) << 2) | ((t[2] & 0xc0) >> 6))
-            ));
-            b64.push(b64_val(
-                (t[2] & 0x3f)
-            ));
+            b64.push(b64_val(b64_1st_sextet(t)));
+            b64.push(b64_val(b64_2nd_sextet(t)));
+            b64.push(b64_val(b64_3rd_sextet(t)));
+            b64.push(b64_val(b64_4th_sextet(t)));
 
             i += 3;
         }
