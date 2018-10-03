@@ -32,6 +32,7 @@ fn b64_4th_sextet(bytes: &[u8]) -> u8 {
     bytes[2] & 0x3f
 }
 
+#[derive(Clone)]
 struct Bytes { m: Vec<u8> }
 
 #[allow(dead_code)]
@@ -151,9 +152,14 @@ fn challenge2() {
 fn challenge3() {
     let hex =
         "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let bytes = Bytes::from_hex(hex);
-    let keylen = bytes.len();
-    println!("{}", keylen);
+    let payload = Bytes::from_hex(hex);
+    let keylen = payload.len();
+    for c in B64DIC.chars() {
+        let key = c.to_string().repeat(keylen);
+        let bytes = Bytes::from_str(&key);
+        let result = payload.clone() ^ bytes;
+        println!("{}", result.to_string());
+    }
 }
 
 fn main() {
