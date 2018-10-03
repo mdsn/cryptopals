@@ -198,9 +198,7 @@ fn challenge3() {
     }
 
     scores.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-    scores.iter().take(1).for_each(|(_, string)| {
-        println!("{}", string);
-    });
+    assert_eq!("Cooking MC's like a pound of bacon", scores[0].1);
 }
 
 fn main() {
