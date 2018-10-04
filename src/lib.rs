@@ -1,11 +1,13 @@
 use std::iter;
 use std::string::FromUtf8Error;
 
-const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
+mod ascii {
+    const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
 
-fn ascii_ix(c: char) -> usize {
-    assert!(ASCII.contains(c));
-    ASCII.find(c.to_ascii_lowercase()).unwrap()
+    pub fn ix(c: char) -> usize {
+        assert!(ASCII.contains(c.to_ascii_lowercase()));
+        ASCII.find(c.to_ascii_lowercase()).unwrap()
+    }
 }
 
 mod b64 {
@@ -140,7 +142,7 @@ fn english_score(text: &str) -> f32 {
     ];
     text.chars()
         .filter(|&c| c.is_ascii_alphabetic() || c == ' ')
-        .map(|c| english_freq[ascii_ix(c.to_ascii_lowercase())])
+        .map(|c| english_freq[ascii::ix(c)])
         .sum()
 }
 
