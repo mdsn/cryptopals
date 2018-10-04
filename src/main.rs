@@ -173,7 +173,7 @@ fn english_score(text: &str) -> f32 {
         .sum()
 }
 
-fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
+fn break_single_byte_xor(payload: &Bytes) -> Option<(f32, String)> {
     let mut scores: Vec<(f32, String)> = Vec::new();
 
     for k in 0..=255u8 {
@@ -186,22 +186,35 @@ fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
     }
 
     scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-    scores[0].clone()
+    if scores.len() > 0 {
+        Some(scores[0].clone())
+    } else {
+        None
+    }
 }
 
 fn challenge3() {
     let hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let payload = Bytes::from_hex(hex);
-    let (_, broken) = break_single_byte_xor(&payload);
-    assert_eq!("Cooking MC's like a pound of bacon", broken);
+    match break_single_byte_xor(&payload) {
+        Some((_, broken)) => assert_eq!("Cooking MC's like a pound of bacon", broken),
+        None => {}
+    }
 }
 
 fn challenge4() {
-    // let txt = File::open("4.txt").unwrap();
-    let hex = "7b5a4215415d544115415d5015455447414c155c46155f4058455c5b523f";
-    let payload = Bytes::from_hex(hex);
-    let (_, broken) = break_single_byte_xor(&payload);
-    assert_eq!("Now that the party is jumping\n", broken)
+    let txt = File::open("4.txt").unwrap();
+    let reader = BufReader::new(txt);
+    let mut scores = Vec::new();
+    for hex in reader.lines().map(|x| x.unwrap()) {
+        let payload = Bytes::from_hex(&hex);
+        match break_single_byte_xor(&payload) {
+            Some(broken) => scores.push(broken),
+            None => continue,
+        }
+    }
+    scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+    assert_eq!("Now that the party is jumping\n", scores[0].1)
 }
 
 fn main() {
