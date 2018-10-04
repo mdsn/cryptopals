@@ -1,3 +1,6 @@
+use std::f32;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::iter;
 use std::ops::BitXor;
 
@@ -5,6 +8,11 @@ const B64DIC: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const HEXDIC: &str = "0123456789abcdef";
 const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
+
+fn ascii_ix(c: char) -> usize {
+    assert!(ASCII.contains(c));
+    ASCII.find(c.to_ascii_lowercase()).unwrap()
+}
 
 fn hex_val(h: char) -> u8 {
     assert!(HEXDIC.contains(h));
@@ -151,62 +159,53 @@ fn challenge2() {
     assert_eq!("746865206b696420646f6e277420706c6179", b3.hex_encode());
 }
 
-fn break_single_byte_xor(payload: &Bytes) -> String {
+fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
     let english_freq = [
         0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  // A-G
         0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  // H-N
         0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  // O-U
-        0.00978, 0.02360, 0.00150, 0.01974, 0.00074, 0.19181      // V-Z, ' '
+        0.00978, 0.02360, 0.00150, 0.01974, 0.00074, 0.13000       // V-Z, ' '
     ];
-    let mut scores = Vec::new();
+    let mut scores: Vec<(f32, String)> = Vec::new();
 
-    for k in (0..=255u8) {
+    for k in 0..=255u8 {
         let key: Vec<u8> = iter::repeat(k).take(payload.len()).collect();
         let bytes = Bytes::from_slice(&key);
-        let result = payload.clone() ^ bytes;
-
-        let mut ignored = 0;
-        let mut total = 0;
-
-        let mut count = vec![0; ASCII.len()];
-        let result_str = result.to_string();
-        for c in result_str.chars() {
-            if !(c.is_ascii_alphabetic() || c == ' ') {
-                continue
-            }
-
-            let lower = c.to_ascii_lowercase();
-            let ix = ASCII.find(lower).unwrap();
-            count[ix] += 1;
-            total += 1;
+        let result_str = (payload.clone() ^ bytes).to_string();
+        if result_str.len() == 0 {
+            continue;
         }
 
-        let mut chi2 = 0.0;
-        for (i, &observed) in count.iter().enumerate() {
-            let expected = english_freq[i] * total as f32;
-            let difference = observed as f32 - expected;
-            chi2 += difference*difference / expected;
-        }
-
-        if !chi2.is_nan() {
-            scores.push((chi2, result_str));
-        }
+        let score = result_str.chars()
+            .filter(|&c| c.is_ascii_alphabetic() || c == ' ')
+            .map(|c| english_freq[ascii_ix(c.to_ascii_lowercase())])
+            .sum();
+        scores.push((score, result_str));
     }
 
-    scores.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-    scores[0].1.clone()
+    scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+    scores[0].clone()
 }
 
 fn challenge3() {
     let hex =
         "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let payload = Bytes::from_hex(hex);
-    let broken = break_single_byte_xor(&payload);
+    let (score, broken) = break_single_byte_xor(&payload);
     assert_eq!("Cooking MC's like a pound of bacon", broken);
+}
+
+fn challenge4() {
+    // let txt = File::open("4.txt").unwrap();
+    let hex = "7b5a4215415d544115415d5015455447414c155c46155f4058455c5b523f";
+    let payload = Bytes::from_hex(hex);
+    let (_, broken) = break_single_byte_xor(&payload);
+    assert_eq!("Now that the party is jumping\n", broken)
 }
 
 fn main() {
     challenge1();
     challenge2();
     challenge3();
+    challenge4();
 }
