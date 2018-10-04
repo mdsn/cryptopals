@@ -4,8 +4,7 @@ use std::io::{BufRead, BufReader};
 use std::iter;
 use std::string::FromUtf8Error;
 
-const B64DIC: &str =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const B64DIC: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const HEXDIC: &str = "0123456789abcdef";
 const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
 
@@ -43,7 +42,9 @@ fn b64_4th_sextet(bytes: &[u8]) -> u8 {
 }
 
 #[derive(Clone)]
-struct Bytes { m: Vec<u8> }
+struct Bytes {
+    m: Vec<u8>,
+}
 
 #[allow(dead_code)]
 impl Bytes {
@@ -58,13 +59,15 @@ impl Bytes {
         while let Some(h1) = iter.next() {
             let h0 = iter.next().unwrap();
             let byte: u8 = hex_val(h1) << 4 | hex_val(h0);
-            buf.push(byte); 
+            buf.push(byte);
         }
         Bytes { m: buf }
     }
 
     fn from_str(s: &str) -> Bytes {
-        Bytes { m: Vec::from(s.as_bytes()) }
+        Bytes {
+            m: Vec::from(s.as_bytes()),
+        }
     }
 
     fn from_slice(s: &[u8]) -> Bytes {
@@ -80,7 +83,7 @@ impl Bytes {
             let slice = if last_chunk {
                 &self.m[i..]
             } else {
-                &self.m[i..i+3]
+                &self.m[i..i + 3]
             };
 
             let mut bytes = [0u8; 3];
@@ -128,7 +131,9 @@ impl Bytes {
 
     fn xor(&self, other: &Self) -> Self {
         assert_eq!(self.len(), other.len());
-        let bytes: Vec<u8> = self.m.iter()
+        let bytes: Vec<u8> = self
+            .m
+            .iter()
             .zip(other.m.iter())
             .map(|(x, y)| x ^ y)
             .collect();
@@ -138,7 +143,7 @@ impl Bytes {
 
 fn challenge1() {
     let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
-                 696b65206120706f69736f6e6f7573206d757368726f6f6d";
+               696b65206120706f69736f6e6f7573206d757368726f6f6d";
     assert_eq!(
         "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t",
         Bytes::from_hex(hex).b64_encode()
@@ -157,10 +162,10 @@ fn challenge2() {
 
 fn english_score(text: &str) -> f32 {
     let english_freq = [
-        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  // A-G
-        0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  // H-N
-        0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  // O-U
-        0.00978, 0.02360, 0.00150, 0.01974, 0.00074, 0.13000       // V-Z, ' '
+        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015, // A-G
+        0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749, // H-N
+        0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758, // O-U
+        0.00978, 0.02360, 0.00150, 0.01974, 0.00074, 0.13000, // V-Z, ' '
     ];
     text.chars()
         .filter(|&c| c.is_ascii_alphabetic() || c == ' ')
@@ -176,7 +181,7 @@ fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
         let bytes = Bytes::from_slice(&key);
         match (payload.xor(&bytes)).to_string() {
             Ok(text) => scores.push((english_score(&text), text)),
-            _ => continue
+            _ => continue,
         }
     }
 
@@ -185,8 +190,7 @@ fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
 }
 
 fn challenge3() {
-    let hex =
-        "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+    let hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let payload = Bytes::from_hex(hex);
     let (_, broken) = break_single_byte_xor(&payload);
     assert_eq!("Cooking MC's like a pound of bacon", broken);
