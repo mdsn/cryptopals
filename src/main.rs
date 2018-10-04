@@ -171,12 +171,7 @@ fn break_single_byte_xor(payload: &Bytes) -> String {
         let mut count = vec![0; ASCII.len()];
         let result_str = result.to_string();
         for c in result_str.chars() {
-            if !c.is_ascii() {
-                continue
-            }
-
             if !(c.is_ascii_alphabetic() || c == ' ') {
-                ignored += 1;
                 continue
             }
 
