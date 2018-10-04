@@ -62,14 +62,14 @@ impl Bytes {
 
     fn from_hex(hex: &str) -> Bytes {
         assert!(hex.len() % 2 == 0, "odd number of digits in hex string");
-        let mut buf = Vec::new();
-        let mut iter = hex.chars();
-        while let Some(h1) = iter.next() {
-            let h0 = iter.next().unwrap();
-            let byte: u8 = hex_val(h1) << 4 | hex_val(h0);
-            buf.push(byte);
+        Bytes {
+            m: hex
+                .chars()
+                .collect::<Vec<char>>()
+                .chunks(2)
+                .map(|pair| hex_val(pair[0]) << 4 | hex_val(pair[1]))
+                .collect(),
         }
-        Bytes { m: buf }
     }
 
     fn from_str(s: &str) -> Bytes {
