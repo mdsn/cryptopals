@@ -2,7 +2,6 @@ use std::f32;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter;
-use std::ops::BitXor;
 use std::string::FromUtf8Error;
 
 const B64DIC: &str =
@@ -126,15 +125,11 @@ impl Bytes {
     fn to_string(&self) -> Result<String, FromUtf8Error> {
         String::from_utf8(self.m.clone())
     }
-}
 
-impl BitXor for Bytes {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Self) -> Self {
-        assert_eq!(self.len(), rhs.len());
+    fn xor(&self, other: &Self) -> Self {
+        assert_eq!(self.len(), other.len());
         let bytes: Vec<u8> = self.m.iter()
-            .zip(rhs.m.iter())
+            .zip(other.m.iter())
             .map(|(x, y)| x ^ y)
             .collect();
         Bytes::from_slice(&bytes)
@@ -156,7 +151,7 @@ fn challenge2() {
 
     let b1 = Bytes::from_hex(h1);
     let b2 = Bytes::from_hex(h2);
-    let b3 = b1 ^ b2;
+    let b3 = b1.xor(&b2);
     assert_eq!("746865206b696420646f6e277420706c6179", b3.hex_encode());
 }
 
@@ -179,7 +174,7 @@ fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
     for k in 0..=255u8 {
         let key: Vec<u8> = iter::repeat(k).take(payload.len()).collect();
         let bytes = Bytes::from_slice(&key);
-        match (payload.clone() ^ bytes).to_string() {
+        match (payload.xor(&bytes)).to_string() {
             Ok(text) => scores.push((english_score(&text), text)),
             _ => continue
         }
@@ -193,7 +188,7 @@ fn challenge3() {
     let hex =
         "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let payload = Bytes::from_hex(hex);
-    let (score, broken) = break_single_byte_xor(&payload);
+    let (_, broken) = break_single_byte_xor(&payload);
     assert_eq!("Cooking MC's like a pound of bacon", broken);
 }
 
