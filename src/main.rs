@@ -209,9 +209,30 @@ fn challenge4() {
     assert_eq!("Now that the party is jumping\n", scores[0].1)
 }
 
+fn build_repeated_key(s: &str, len: usize) -> String {
+    iter::repeat(s)
+        .map(|k| k.chars())
+        .flatten()
+        .take(len)
+        .collect()
+}
+
+fn challenge5() {
+    let input = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    let payload = Bytes::from_str(input);
+    let key = Bytes::from_str(&build_repeated_key("ICE", payload.len()));
+    let encrypted = payload.xor(&key);
+    assert_eq!(
+        encrypted.hex_encode(),
+        "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272\
+         a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
+    );
+}
+
 fn main() {
     challenge1();
     challenge2();
     challenge3();
     challenge4();
+    challenge5();
 }
