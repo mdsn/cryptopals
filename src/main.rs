@@ -204,15 +204,13 @@ fn challenge3() {
 
 fn challenge4() {
     let txt = File::open("4.txt").unwrap();
-    let reader = BufReader::new(txt);
-    let mut scores = Vec::new();
-    for hex in reader.lines().map(|x| x.unwrap()) {
-        let payload = Bytes::from_hex(&hex);
-        match break_single_byte_xor(&payload) {
-            Some(broken) => scores.push(broken),
-            None => continue,
-        }
-    }
+    let mut scores: Vec<_> = BufReader::new(txt)
+        .lines()
+        .filter_map(|hex| {
+            let payload = Bytes::from_hex(&hex.unwrap());
+            break_single_byte_xor(&payload)
+        })
+        .collect();
     scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
     assert_eq!("Now that the party is jumping\n", scores[0].1)
 }
