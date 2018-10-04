@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter;
 use std::ops::BitXor;
+use std::string::FromUtf8Error;
 
 const B64DIC: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -122,8 +123,8 @@ impl Bytes {
         s
     }
 
-    fn to_string(&self) -> String {
-        String::from_utf8(self.m.iter().cloned().collect()).unwrap_or("".to_string())
+    fn to_string(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.m.clone())
     }
 }
 
@@ -159,28 +160,29 @@ fn challenge2() {
     assert_eq!("746865206b696420646f6e277420706c6179", b3.hex_encode());
 }
 
-fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
+fn english_score(text: &str) -> f32 {
     let english_freq = [
         0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  // A-G
         0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  // H-N
         0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  // O-U
         0.00978, 0.02360, 0.00150, 0.01974, 0.00074, 0.13000       // V-Z, ' '
     ];
+    text.chars()
+        .filter(|&c| c.is_ascii_alphabetic() || c == ' ')
+        .map(|c| english_freq[ascii_ix(c.to_ascii_lowercase())])
+        .sum()
+}
+
+fn break_single_byte_xor(payload: &Bytes) -> (f32, String) {
     let mut scores: Vec<(f32, String)> = Vec::new();
 
     for k in 0..=255u8 {
         let key: Vec<u8> = iter::repeat(k).take(payload.len()).collect();
         let bytes = Bytes::from_slice(&key);
-        let result_str = (payload.clone() ^ bytes).to_string();
-        if result_str.len() == 0 {
-            continue;
+        match (payload.clone() ^ bytes).to_string() {
+            Ok(text) => scores.push((english_score(&text), text)),
+            _ => continue
         }
-
-        let score = result_str.chars()
-            .filter(|&c| c.is_ascii_alphabetic() || c == ' ')
-            .map(|c| english_freq[ascii_ix(c.to_ascii_lowercase())])
-            .sum();
-        scores.push((score, result_str));
     }
 
     scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
