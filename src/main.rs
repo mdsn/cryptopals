@@ -75,29 +75,29 @@ impl Bytes {
     }
 
     fn b64_encode(&self) -> String {
-        let mut i: usize = 0;
         let mut b64 = String::new();
 
-        while i < self.len() {
+        for chunk in self.m.chunks(3) {
             let mut bytes = [0u8; 3];
-            for (i, &byte) in self.m[i..].iter().take(3).enumerate() {
+            for (i, &byte) in chunk.iter().enumerate() {
                 bytes[i] = byte;
             }
 
             b64.push(b64_val(b64_1st_sextet(&bytes)));
             b64.push(b64_val(b64_2nd_sextet(&bytes)));
 
-            if i + 3 <= self.len() {
-                b64.push(b64_val(b64_3rd_sextet(&bytes)));
-                b64.push(b64_val(b64_4th_sextet(&bytes)));
-            } else if 3 - (self.len() % 3) == 1 {
-                b64.push(b64_val(b64_3rd_sextet(&bytes)));
-                b64.push('=');
-            } else {
-                b64.push_str("==");
+            match chunk.len() {
+                1 => b64.push_str("=="),
+                2 => {
+                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
+                    b64.push('=');
+                }
+                3 => {
+                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
+                    b64.push(b64_val(b64_4th_sextet(&bytes)));
+                }
+                _ => {}
             }
-
-            i += 3;
         }
 
         b64
