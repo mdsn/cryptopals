@@ -1,3 +1,4 @@
+use std::iter;
 use std::ops::BitXor;
 
 const B64DIC: &str =
@@ -159,9 +160,9 @@ fn break_single_byte_xor(payload: &Bytes) -> String {
     ];
     let mut scores = Vec::new();
 
-    for k in B64DIC.chars() {
-        let key = k.to_string().repeat(payload.len());
-        let bytes = Bytes::from_str(&key);
+    for k in (0..=255u8) {
+        let key: Vec<u8> = iter::repeat(k).take(payload.len()).collect();
+        let bytes = Bytes::from_slice(&key);
         let result = payload.clone() ^ bytes;
 
         let mut ignored = 0;
