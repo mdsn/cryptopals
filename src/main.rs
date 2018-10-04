@@ -40,6 +40,14 @@ fn b64_3rd_sextet(bytes: &[u8]) -> u8 {
 fn b64_4th_sextet(bytes: &[u8]) -> u8 {
     bytes[2] & 0x3f
 }
+fn b64_sextets(triplet: &[u8]) -> (char, char, char, char) {
+    (
+        b64_val(b64_1st_sextet(triplet)),
+        b64_val(b64_2nd_sextet(triplet)),
+        b64_val(b64_3rd_sextet(triplet)),
+        b64_val(b64_4th_sextet(triplet)),
+    )
+}
 
 #[derive(Clone)]
 struct Bytes {
@@ -83,18 +91,19 @@ impl Bytes {
                 bytes[i] = byte;
             }
 
-            b64.push(b64_val(b64_1st_sextet(&bytes)));
-            b64.push(b64_val(b64_2nd_sextet(&bytes)));
+            let part = b64_sextets(&bytes);
+            b64.push(part.0);
+            b64.push(part.1);
 
             match chunk.len() {
                 1 => b64.push_str("=="),
                 2 => {
-                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
+                    b64.push(part.2);
                     b64.push('=');
                 }
                 3 => {
-                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
-                    b64.push(b64_val(b64_4th_sextet(&bytes)));
+                    b64.push(part.2);
+                    b64.push(part.3);
                 }
                 _ => {}
             }
