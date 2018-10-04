@@ -79,33 +79,22 @@ impl Bytes {
         let mut b64 = String::new();
 
         while i < self.len() {
-            let last_chunk = i + 3 > self.len();
-            let slice = if last_chunk {
-                &self.m[i..]
-            } else {
-                &self.m[i..i + 3]
-            };
-
             let mut bytes = [0u8; 3];
-            for (i, &byte) in slice.iter().enumerate() {
+            for (i, &byte) in self.m[i..].iter().take(3).enumerate() {
                 bytes[i] = byte;
             }
 
             b64.push(b64_val(b64_1st_sextet(&bytes)));
             b64.push(b64_val(b64_2nd_sextet(&bytes)));
 
-            if !last_chunk {
+            if i + 3 <= self.len() {
                 b64.push(b64_val(b64_3rd_sextet(&bytes)));
                 b64.push(b64_val(b64_4th_sextet(&bytes)));
+            } else if 3 - (self.len() % 3) == 1 {
+                b64.push(b64_val(b64_3rd_sextet(&bytes)));
+                b64.push('=');
             } else {
-                let missing = 3 - slice.len();
-
-                if missing == 1 {
-                    b64.push(b64_val(b64_3rd_sextet(&bytes)));
-                    b64.push('=');
-                } else {
-                    b64.push_str("==");
-                }
+                b64.push_str("==");
             }
 
             i += 3;
