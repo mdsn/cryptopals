@@ -115,14 +115,10 @@ impl Bytes {
     }
 
     fn hex_encode(&self) -> String {
-        let mut s = String::new();
-        for &byte in self.m.iter() {
-            let ls = byte & 0xf;
-            let ms = (byte & 0xf0) >> 4;
-            s.push(hex_char(ms));
-            s.push(hex_char(ls));
-        }
-        s
+        self.m
+            .iter()
+            .flat_map(|&byte| vec![hex_char((byte & 0xf0) >> 4), hex_char(byte & 0xf)])
+            .collect()
     }
 
     fn to_string(&self) -> Result<String, FromUtf8Error> {
