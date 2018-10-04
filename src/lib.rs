@@ -79,10 +79,7 @@ impl Bytes {
         let mut b64s = String::new();
 
         for chunk in self.m.chunks(3) {
-            let mut bytes = [0u8; 3];
-            for (i, &byte) in chunk.iter().enumerate() {
-                bytes[i] = byte;
-            }
+            let bytes: Vec<u8> = chunk.iter().chain([0, 0].iter()).cloned().take(3).collect();
 
             let part = b64::sextets(&bytes);
             b64s.push(part.0);
