@@ -1,7 +1,6 @@
 use std::iter;
 use std::string::FromUtf8Error;
 
-const HEXDIC: &str = "0123456789abcdef";
 const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
 
 fn ascii_ix(c: char) -> usize {
@@ -27,14 +26,18 @@ mod b64 {
     }
 }
 
-fn hex_char(val: u8) -> char {
-    assert!(val < 16);
-    HEXDIC.chars().nth(val as usize).unwrap()
-}
+mod hex {
+    const HEXDIC: &str = "0123456789abcdef";
 
-fn hex_val(h: char) -> u8 {
-    assert!(HEXDIC.contains(h));
-    HEXDIC.find(h).unwrap() as u8
+    pub fn encode_single(val: u8) -> char {
+        assert!(val < 16);
+        HEXDIC.chars().nth(val as usize).unwrap()
+    }
+
+    pub fn val(h: char) -> u8 {
+        assert!(HEXDIC.contains(h));
+        HEXDIC.find(h).unwrap() as u8
+    }
 }
 
 #[derive(Clone)]
@@ -55,7 +58,7 @@ impl Bytes {
                 .chars()
                 .collect::<Vec<char>>()
                 .chunks(2)
-                .map(|pair| hex_val(pair[0]) << 4 | hex_val(pair[1]))
+                .map(|pair| hex::val(pair[0]) << 4 | hex::val(pair[1]))
                 .collect(),
         }
     }
@@ -103,7 +106,12 @@ impl Bytes {
     pub fn hex_encode(&self) -> String {
         self.m
             .iter()
-            .flat_map(|&byte| vec![hex_char((byte & 0xf0) >> 4), hex_char(byte & 0xf)])
+            .flat_map(|&byte| {
+                vec![
+                    hex::encode_single((byte & 0xf0) >> 4),
+                    hex::encode_single(byte & 0xf),
+                ]
+            })
             .collect()
     }
 
