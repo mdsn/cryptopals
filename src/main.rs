@@ -4,7 +4,7 @@ extern crate cryptopals;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use cryptopals::{break_single_byte_xor, build_repeated_key, Bytes};
+use cryptopals::{break_single_byte_xor, build_repeated_key, hamming, Bytes};
 
 fn challenge1() {
     let hex = "49276d206b696c6c696e6720796f757220627261696e206c\
@@ -59,10 +59,17 @@ fn challenge5() {
     );
 }
 
+fn challenge6() {
+    let b0 = Bytes::from_str("this is a test");
+    let b1 = Bytes::from_str("wokka wokka!!!");
+    assert_eq!(37, hamming(&b0, &b1));
+}
+
 fn main() {
     challenge1();
     challenge2();
     challenge3();
     challenge4();
     challenge5();
+    challenge6();
 }

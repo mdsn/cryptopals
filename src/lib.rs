@@ -128,6 +128,13 @@ impl Bytes {
             .collect();
         Bytes::from_slice(&bytes)
     }
+
+    pub fn bit_count(&self) -> u32 {
+        self.m
+            .iter()
+            .map(|&x| (0..=7).map(|i| (x as u32 & 2_u32.pow(i)) >> i).sum::<u32>())
+            .sum()
+    }
 }
 
 fn english_score(text: &str) -> f32 {
@@ -169,4 +176,8 @@ pub fn build_repeated_key(s: &str, len: usize) -> String {
         .flatten()
         .take(len)
         .collect()
+}
+
+pub fn hamming(b0: &Bytes, b1: &Bytes) -> u32 {
+    b0.xor(b1).bit_count()
 }
