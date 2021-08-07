@@ -1,5 +1,4 @@
 use std::iter;
-use std::string::FromUtf8Error;
 
 mod ascii {
     const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
@@ -10,78 +9,17 @@ mod ascii {
     }
 }
 
-mod b64 {
+pub mod b64 {
     const B64DIC: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    pub fn sextets(triplet: &[u8]) -> (char, char, char, char) {
-        (
-            val((triplet[0] & 0xfc) >> 2),
-            val(((triplet[0] & 0x3) << 4) | ((triplet[1] & 0xf0) >> 4)),
-            val(((triplet[1] & 0xf) << 2) | ((triplet[2] & 0xc0) >> 6)),
-            val(triplet[2] & 0x3f),
-        )
-    }
-
-    fn val(sextet: u8) -> char {
-        assert!((sextet as usize) < B64DIC.len());
-        B64DIC.chars().nth(sextet as usize).unwrap()
-    }
-}
-
-mod hex {
-    const HEXDIC: &str = "0123456789abcdef";
-
-    pub fn encode_single(val: u8) -> char {
-        assert!(val < 16);
-        HEXDIC.chars().nth(val as usize).unwrap()
-    }
-
-    pub fn val(h: char) -> u8 {
-        assert!(HEXDIC.contains(h));
-        HEXDIC.find(h).unwrap() as u8
-    }
-}
-
-#[derive(Clone)]
-pub struct Bytes {
-    m: Vec<u8>,
-}
-
-#[allow(dead_code)]
-impl Bytes {
-    pub fn len(&self) -> usize {
-        self.m.len()
-    }
-
-    pub fn from_hex(hex: &str) -> Bytes {
-        assert!(hex.len() % 2 == 0, "odd number of digits in hex string");
-        Bytes {
-            m: hex
-                .chars()
-                .collect::<Vec<char>>()
-                .chunks(2)
-                .map(|pair| hex::val(pair[0]) << 4 | hex::val(pair[1]))
-                .collect(),
-        }
-    }
-
-    pub fn from_str(s: &str) -> Bytes {
-        Bytes {
-            m: Vec::from(s.as_bytes()),
-        }
-    }
-
-    pub fn from_slice(s: &[u8]) -> Bytes {
-        Bytes { m: Vec::from(s) }
-    }
-
-    pub fn b64_encode(&self) -> String {
+    /// Encode a slice of bytes in base 64.
+    pub fn encode(bytes: &[u8]) -> String {
         let mut b64s = String::new();
 
-        for chunk in self.m.chunks(3) {
+        for chunk in bytes.chunks(3) {
             let bytes: Vec<u8> = chunk.iter().chain([0, 0].iter()).cloned().take(3).collect();
 
-            let part = b64::sextets(&bytes);
+            let part = sextets(&bytes);
             b64s.push(part.0);
             b64s.push(part.1);
 
@@ -95,45 +33,120 @@ impl Bytes {
                     b64s.push(part.2);
                     b64s.push(part.3);
                 }
-                _ => {}
+                _ => unreachable!(),
             }
         }
 
         b64s
     }
 
-    pub fn hex_encode(&self) -> String {
-        self.m
+    fn sextets(triplet: &[u8]) -> (char, char, char, char) {
+        (
+            encode_single((triplet[0] & 0xfc) >> 2),
+            encode_single(((triplet[0] & 0x3) << 4) | ((triplet[1] & 0xf0) >> 4)),
+            encode_single(((triplet[1] & 0xf) << 2) | ((triplet[2] & 0xc0) >> 6)),
+            encode_single(triplet[2] & 0x3f),
+        )
+    }
+
+    fn encode_single(sextet: u8) -> char {
+        assert!((sextet as usize) < B64DIC.len());
+        B64DIC.chars().nth(sextet as usize).unwrap()
+    }
+}
+
+/// Count the number of 1-valued bits in a byte slice.
+fn bit_count(bytes: &[u8]) -> u32 {
+    bytes
+        .iter()
+        .map(|&x| (0..=7).map(|i| (x as u32 & 2_u32.pow(i)) >> i).sum::<u32>())
+        .sum()
+}
+
+/// Xor two equally long byte slices.
+pub fn xor_bytes(a: &[u8], b: &[u8]) -> Vec<u8> {
+    assert_eq!(a.len(), b.len()); // TODO: ???
+    a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect()
+}
+
+pub mod hex {
+    /// Parse a hexadecimal string into a vector of a bytes.
+    pub fn parse(s: impl AsRef<str>) -> Result<Vec<u8>, String> {
+        let hexstr = s.as_ref();
+        if hexstr.len() % 2 != 0 {
+            return Err("invalid hex string".to_string());
+        }
+
+        let bytes = hexstr
+            .chars()
+            .collect::<Vec<char>>()
+            .chunks(2)
+            .map(|pair| {
+                let p0 = decode_single(pair[0])?;
+                let p1 = decode_single(pair[1])?;
+                Ok(p0 << 4 | p1)
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+
+        Ok(bytes)
+    }
+
+    /// Get the hexadecimal representation of some bytes.
+    pub fn encode(bytes: &[u8]) -> String {
+        bytes
             .iter()
             .flat_map(|&byte| {
-                vec![
-                    hex::encode_single((byte & 0xf0) >> 4),
-                    hex::encode_single(byte & 0xf),
-                ]
+                let b0 = encode_single((byte & 0xf0) >> 4).unwrap();
+                let b1 = encode_single(byte & 0xf).unwrap();
+                vec![b0, b1]
             })
             .collect()
     }
 
-    pub fn to_string(&self) -> Result<String, FromUtf8Error> {
-        String::from_utf8(self.m.clone())
+    /// Get the hexadecimal digit representation of a four-bit number.
+    fn encode_single(value: u8) -> Result<char, String> {
+        match value {
+            0 => Ok('0'),
+            1 => Ok('1'),
+            2 => Ok('2'),
+            3 => Ok('3'),
+            4 => Ok('4'),
+            5 => Ok('5'),
+            6 => Ok('6'),
+            7 => Ok('7'),
+            8 => Ok('8'),
+            9 => Ok('9'),
+            10 => Ok('a'),
+            11 => Ok('b'),
+            12 => Ok('c'),
+            13 => Ok('d'),
+            14 => Ok('e'),
+            15 => Ok('f'),
+            _ => Err("invalid u8".to_string()),
+        }
     }
 
-    pub fn xor(&self, other: &Self) -> Self {
-        assert_eq!(self.len(), other.len());
-        let bytes: Vec<u8> = self
-            .m
-            .iter()
-            .zip(other.m.iter())
-            .map(|(x, y)| x ^ y)
-            .collect();
-        Bytes::from_slice(&bytes)
-    }
-
-    pub fn bit_count(&self) -> u32 {
-        self.m
-            .iter()
-            .map(|&x| (0..=7).map(|i| (x as u32 & 2_u32.pow(i)) >> i).sum::<u32>())
-            .sum()
+    /// Get the decimal value of a single hexadecimal digit.
+    fn decode_single(digit: char) -> Result<u8, String> {
+        match digit {
+            '0' => Ok(0),
+            '1' => Ok(1),
+            '2' => Ok(2),
+            '3' => Ok(3),
+            '4' => Ok(4),
+            '5' => Ok(5),
+            '6' => Ok(6),
+            '7' => Ok(7),
+            '8' => Ok(8),
+            '9' => Ok(9),
+            'a' => Ok(10),
+            'b' => Ok(11),
+            'c' => Ok(12),
+            'd' => Ok(13),
+            'e' => Ok(14),
+            'f' => Ok(15),
+            _ => Err("invalid hex string".to_string()),
+        }
     }
 }
 
@@ -150,23 +163,22 @@ fn english_score(text: &str) -> f32 {
         .sum()
 }
 
-pub fn break_single_byte_xor(payload: &Bytes) -> Option<(f32, String)> {
+pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, String), String> {
     let mut scores: Vec<(f32, String)> = Vec::new();
 
     for k in 0..=255u8 {
-        let key: Vec<u8> = iter::repeat(k).take(payload.len()).collect();
-        let bytes = Bytes::from_slice(&key);
-        match (payload.xor(&bytes)).to_string() {
+        let key: Vec<u8> = iter::repeat(k).take(bytes.len()).collect();
+        match String::from_utf8(xor_bytes(bytes, &key)) {
             Ok(text) => scores.push((english_score(&text), text)),
             _ => continue,
         }
     }
 
-    scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-    if scores.len() > 0 {
-        Some(scores[0].clone())
+    scores.sort_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+    if !scores.is_empty() {
+        Ok(scores[0].clone())
     } else {
-        None
+        Err("no valid utf8 strings found".to_string())
     }
 }
 
@@ -178,6 +190,6 @@ pub fn build_repeated_key(s: &str, len: usize) -> String {
         .collect()
 }
 
-pub fn hamming(b0: &Bytes, b1: &Bytes) -> u32 {
-    b0.xor(b1).bit_count()
+pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
+    bit_count(&xor_bytes(b0, b1))
 }
