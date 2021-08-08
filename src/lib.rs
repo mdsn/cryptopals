@@ -40,6 +40,43 @@ pub mod b64 {
         b64s
     }
 
+    /// Decode a base64 string into a vector of bytes.
+    pub fn decode(s: impl AsRef<str>) -> Result<Vec<u8>, String> {
+        let b64txt = s.as_ref();
+        let indices = b64txt
+            .trim_end_matches('=')
+            .chars()
+            .map(|c| {
+                let index = B64DIC
+                    .find(c)
+                    .ok_or_else(|| "invalid base64 string".to_string())?;
+                Ok(index as u8)
+            })
+            .collect::<Result<Vec<u8>, String>>()?;
+        let bytes = indices
+            .chunks(4)
+            .flat_map(|x| match x.len() {
+                4 => {
+                    let b0 = (x[0] << 2) | ((x[1] & 0b110000) >> 4);
+                    let b1 = ((x[1] & 0b001111) << 4) | ((x[2] & 0b111100) >> 2);
+                    let b2 = ((x[2] & 0b000011) << 6) | x[3];
+                    vec![b0, b1, b2]
+                }
+                3 => {
+                    let b0 = (x[0] << 2) | ((x[1] & 0b110000) >> 4);
+                    let b1 = ((x[1] & 0b001111) << 4) | ((x[2] & 0b111100) >> 2);
+                    vec![b0, b1]
+                }
+                2 => {
+                    let b0 = (x[0] << 2) | ((x[1] & 0b110000) >> 4);
+                    vec![b0]
+                }
+                _ => unreachable!(),
+            })
+            .collect();
+        Ok(bytes)
+    }
+
     fn sextets(triplet: &[u8]) -> (char, char, char, char) {
         (
             encode_single((triplet[0] & 0xfc) >> 2),
@@ -192,4 +229,49 @@ pub fn build_repeated_key(s: &str, len: usize) -> String {
 
 pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
     bit_count(&xor_bytes(b0, b1))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::b64;
+
+    #[test]
+    fn test_base64_encode() {
+        assert_eq!(b64::encode("".as_bytes()), "");
+        assert_eq!(b64::encode("f".as_bytes()), "Zg==");
+        assert_eq!(b64::encode("fo".as_bytes()), "Zm8=");
+        assert_eq!(b64::encode("foo".as_bytes()), "Zm9v");
+        assert_eq!(b64::encode("foob".as_bytes()), "Zm9vYg==");
+        assert_eq!(b64::encode("fooba".as_bytes()), "Zm9vYmE=");
+        assert_eq!(b64::encode("foobar".as_bytes()), "Zm9vYmFy");
+    }
+
+    #[test]
+    fn test_base64_decode() {
+        assert_eq!(
+            String::from_utf8(b64::decode("Zm9vYmFy").unwrap()).unwrap(),
+            "foobar"
+        );
+        assert_eq!(
+            String::from_utf8(b64::decode("Zm9vYmE=").unwrap()).unwrap(),
+            "fooba"
+        );
+        assert_eq!(
+            String::from_utf8(b64::decode("Zm9vYg==").unwrap()).unwrap(),
+            "foob"
+        );
+        assert_eq!(
+            String::from_utf8(b64::decode("Zm9v").unwrap()).unwrap(),
+            "foo"
+        );
+        assert_eq!(
+            String::from_utf8(b64::decode("Zm8=").unwrap()).unwrap(),
+            "fo"
+        );
+        assert_eq!(
+            String::from_utf8(b64::decode("Zg==").unwrap()).unwrap(),
+            "f"
+        );
+        assert_eq!(String::from_utf8(b64::decode("").unwrap()).unwrap(), "");
+    }
 }
