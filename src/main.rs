@@ -61,7 +61,7 @@ fn challenge5() {
 }
 
 fn find_xor_key_size(bytes: &[u8]) -> usize {
-    let mut bestDist = f32::MAX;
+    let mut mindist = f32::MAX;
     let mut keysize: usize = 0;
     for candidate in 2..=40 {
         let chunks: Vec<_> = bytes.chunks(candidate).take(4).collect();
@@ -72,33 +72,27 @@ fn find_xor_key_size(bytes: &[u8]) -> usize {
             }
         }
         dist = dist / candidate as f32;
-        if dist < bestDist {
+        if dist < mindist {
             keysize = candidate;
-            bestDist = dist;
+            mindist = dist;
         }
     }
-    println!("dist:{} keysize:{}", bestDist, keysize);
     keysize
 }
 
 fn find_repxor_key(bytes: &[u8]) -> Vec<u8> {
     let keysize = find_xor_key_size(&bytes);
     let blocks = bytes.chunks(keysize).collect::<Vec<_>>();
-    let mut transposed = vec![];
+    let mut keybytes = vec![];
     for i in 0..keysize {
-        let mut transp_block = vec![];
+        let mut transposed = vec![];
         for b in &blocks {
             if b.len() <= i {
                 break;
             }
-            transp_block.push(b[i]);
+            transposed.push(b[i]);
         }
-        transposed.push(transp_block);
-    }
-
-    let mut keybytes = vec![];
-    for block in &transposed {
-        let (_, key, _) = break_single_byte_xor(&block).unwrap();
+        let (_, key, _) = break_single_byte_xor(&transposed).unwrap();
         keybytes.push(key);
     }
 
@@ -122,7 +116,7 @@ fn challenge6() {
 
     let key = build_repeated_key(&find_repxor_key(&bytes), bytes.len());
     let pt = String::from_utf8(xor_bytes(&bytes, &key)).unwrap();
-    println!("{}", pt);
+    assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
 
 fn main() {
