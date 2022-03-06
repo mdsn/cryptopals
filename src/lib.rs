@@ -200,18 +200,19 @@ fn english_score(text: &str) -> f32 {
         .sum()
 }
 
-pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, String), String> {
-    let mut scores: Vec<(f32, String)> = Vec::new();
+// (score, key, text)
+pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, u8, String), String> {
+    let mut scores = vec![];
 
     for k in 0..=255u8 {
         let key: Vec<u8> = iter::repeat(k).take(bytes.len()).collect();
         match String::from_utf8(xor_bytes(bytes, &key)) {
-            Ok(text) => scores.push((english_score(&text), text)),
+            Ok(text) => scores.push((english_score(&text), k, text)),
             _ => continue,
         }
     }
 
-    scores.sort_by(|(a, _), (b, _)| b.partial_cmp(a).unwrap());
+    scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
     if !scores.is_empty() {
         Ok(scores[0].clone())
     } else {
@@ -219,10 +220,10 @@ pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, String), String> {
     }
 }
 
-pub fn build_repeated_key(s: &str, len: usize) -> String {
-    iter::repeat(s)
-        .map(|k| k.chars())
+pub fn build_repeated_key(b: &[u8], len: usize) -> Vec<u8> {
+    iter::repeat(b)
         .flatten()
+        .cloned()
         .take(len)
         .collect()
 }

@@ -16,7 +16,7 @@ fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
     let bytes = buffer.as_bytes();
-    let repkey = build_repeated_key(key, bytes.len());
-    let hexstr = hex::encode(&xor_bytes(bytes, repkey.as_bytes()));
+    let repkey = build_repeated_key(&key.as_bytes(), bytes.len());
+    let hexstr = hex::encode(&xor_bytes(bytes, &repkey));
     println!("{}", hexstr);
 }
