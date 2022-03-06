@@ -1,6 +1,10 @@
 /// The Cryptopals challenges, set 1, challenges 1 through 5.
 extern crate cryptopals;
 
+use aes::cipher::generic_array::GenericArray;
+use aes::cipher::{BlockDecrypt, KeyInit};
+use aes::Aes128;
+
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 
@@ -99,19 +103,23 @@ fn find_repxor_key(bytes: &[u8]) -> Vec<u8> {
     keybytes
 }
 
-fn challenge6() {
-    let b0 = "this is a test".as_bytes();
-    let b1 = "wokka wokka!!!".as_bytes();
-    assert_eq!(37, hamming(b0, b1));
-
-    let b64txt = BufReader::new(File::open("6.txt").unwrap())
+fn read_concat_lines(filename: &str) -> String {
+    BufReader::new(File::open(filename).unwrap())
         .lines()
         .map(|l| l.unwrap())
         .reduce(|mut a, b| {
             a.push_str(&b);
             a
         })
-        .unwrap();
+        .unwrap()
+}
+
+fn challenge6() {
+    let b0 = "this is a test".as_bytes();
+    let b1 = "wokka wokka!!!".as_bytes();
+    assert_eq!(37, hamming(b0, b1));
+
+    let b64txt = read_concat_lines("6.txt");
     let bytes = b64::decode(&b64txt).unwrap();
 
     let key = build_repeated_key(&find_repxor_key(&bytes), bytes.len());
@@ -119,11 +127,29 @@ fn challenge6() {
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
 
+fn challenge7() {
+    let key = GenericArray::from_slice(b"YELLOW SUBMARINE");
+    let cipher = Aes128::new(&key);
+
+    let bytes = b64::decode(&read_concat_lines("7.txt")).unwrap();
+    let mut blocks  = bytes
+        .chunks(key.len())
+        .map(|b| GenericArray::from_slice(b).to_owned())
+        .collect::<Vec<_>>();
+
+    cipher.decrypt_blocks(blocks.as_mut_slice());
+    let bytes: Vec<u8> = blocks.iter().cloned().flatten().collect();
+    let pt = String::from_utf8(bytes).unwrap();
+
+    assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
+}
+
 fn main() {
-    // challenge1();
-    // challenge2();
-    // challenge3();
-    // challenge4();
-    // challenge5();
+    challenge1();
+    challenge2();
+    challenge3();
+    challenge4();
+    challenge5();
     challenge6();
+    challenge7();
 }

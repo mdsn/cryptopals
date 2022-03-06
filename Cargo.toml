@@ -5,3 +5,4 @@ authors = ["Mariano Casco <marianoc88@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+aes = "0.8"
