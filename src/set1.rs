@@ -1,19 +1,15 @@
-/// The Cryptopals challenges, set 1, challenges 1 through 5.
+/// The Cryptopals challenges, set 1.
 extern crate cryptopals;
 
-use aes::cipher::consts::U16;
-use aes::cipher::generic_array::{ArrayLength, GenericArray};
+use aes::cipher::generic_array::GenericArray;
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;
 
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
-use std::iter::{self, FromIterator};
+use std::io::{BufRead, BufReader};
 
-use cryptopals::{
-    b64, break_single_byte_xor, build_repeated_key, english_score, hamming, hex, xor_bytes,
-};
+use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes};
 
 fn challenge1() {
     let bytes = hex::parse(
@@ -177,12 +173,12 @@ fn challenge8() {
 }
 
 fn main() {
-    // challenge1();
-    // challenge2();
-    // challenge3();
-    // challenge4();
-    // challenge5();
-    // challenge6();
-    // challenge7();
+    challenge1();
+    challenge2();
+    challenge3();
+    challenge4();
+    challenge5();
+    challenge6();
+    challenge7();
     challenge8();
 }

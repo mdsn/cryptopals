@@ -6,3 +6,7 @@ edition = "2018"
 
 [dependencies]
 aes = "0.8"
+
+[[bin]]
+name = "set1"
+path = "src/set1.rs"
