@@ -1,14 +1,19 @@
 /// The Cryptopals challenges, set 1, challenges 1 through 5.
 extern crate cryptopals;
 
-use aes::cipher::generic_array::GenericArray;
+use aes::cipher::consts::U16;
+use aes::cipher::generic_array::{ArrayLength, GenericArray};
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
+use std::iter::{self, FromIterator};
 
-use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes};
+use cryptopals::{
+    b64, break_single_byte_xor, build_repeated_key, english_score, hamming, hex, xor_bytes,
+};
 
 fn challenge1() {
     let bytes = hex::parse(
@@ -84,8 +89,7 @@ fn find_xor_key_size(bytes: &[u8]) -> usize {
     keysize
 }
 
-fn find_repxor_key(bytes: &[u8]) -> Vec<u8> {
-    let keysize = find_xor_key_size(&bytes);
+fn find_repxor_key(bytes: &[u8], keysize: usize) -> Result<Vec<u8>, String> {
     let blocks = bytes.chunks(keysize).collect::<Vec<_>>();
     let mut keybytes = vec![];
     for i in 0..keysize {
@@ -96,11 +100,11 @@ fn find_repxor_key(bytes: &[u8]) -> Vec<u8> {
             }
             transposed.push(b[i]);
         }
-        let (_, key, _) = break_single_byte_xor(&transposed).unwrap();
+        let (_, key, _) = break_single_byte_xor(&transposed)?;
         keybytes.push(key);
     }
 
-    keybytes
+    Ok(keybytes)
 }
 
 fn read_concat_lines(filename: &str) -> String {
@@ -121,8 +125,9 @@ fn challenge6() {
 
     let b64txt = read_concat_lines("6.txt");
     let bytes = b64::decode(&b64txt).unwrap();
+    let keysize = find_xor_key_size(&bytes);
 
-    let key = build_repeated_key(&find_repxor_key(&bytes), bytes.len());
+    let key = build_repeated_key(&find_repxor_key(&bytes, keysize).unwrap(), bytes.len());
     let pt = String::from_utf8(xor_bytes(&bytes, &key)).unwrap();
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
@@ -132,7 +137,7 @@ fn challenge7() {
     let cipher = Aes128::new(&key);
 
     let bytes = b64::decode(&read_concat_lines("7.txt")).unwrap();
-    let mut blocks  = bytes
+    let mut blocks = bytes
         .chunks(key.len())
         .map(|b| GenericArray::from_slice(b).to_owned())
         .collect::<Vec<_>>();
@@ -144,12 +149,40 @@ fn challenge7() {
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
 
+fn detect_ecb(bytes: &[u8], block_size: usize) -> bool {
+    if bytes.len() % block_size != 0 {
+        panic!("detect_ecb: bytes len not multiple of block_size");
+    }
+    let mut seen = HashSet::new();
+    for block in bytes.chunks(block_size) {
+        let bs = block.to_vec();
+        if seen.contains(&bs) {
+            return true;
+        }
+        seen.insert(bs);
+    }
+    false
+}
+
+fn challenge8() {
+    let lines = BufReader::new(File::open("8.txt").unwrap())
+        .lines()
+        .flatten()
+        .flat_map(|s| hex::parse(s));
+    for (i, bytes) in lines.enumerate() {
+        if detect_ecb(&bytes, 16) {
+            assert_eq!(i, 132);
+        }
+    }
+}
+
 fn main() {
-    challenge1();
-    challenge2();
-    challenge3();
-    challenge4();
-    challenge5();
-    challenge6();
-    challenge7();
+    // challenge1();
+    // challenge2();
+    // challenge3();
+    // challenge4();
+    // challenge5();
+    // challenge6();
+    // challenge7();
+    challenge8();
 }
