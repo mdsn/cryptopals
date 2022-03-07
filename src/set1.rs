@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes};
+use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes, aes_decrypt};
 
 fn challenge1() {
     let bytes = hex::parse(
@@ -127,19 +127,10 @@ fn challenge6() {
 }
 
 fn challenge7() {
-    let key = GenericArray::from_slice(b"YELLOW SUBMARINE");
-    let cipher = Aes128::new(&key);
-
+    let key = b"YELLOW SUBMARINE";
     let bytes = b64::decode(&read_concat_lines("7.txt")).unwrap();
-    let mut blocks = bytes
-        .chunks(key.len())
-        .map(|b| GenericArray::from_slice(b).to_owned())
-        .collect::<Vec<_>>();
-
-    cipher.decrypt_blocks(blocks.as_mut_slice());
-    let bytes: Vec<u8> = blocks.iter().cloned().flatten().collect();
+    let bytes = aes_decrypt(&bytes, key);
     let pt = String::from_utf8(bytes).unwrap();
-
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
 

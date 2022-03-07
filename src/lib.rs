@@ -1,5 +1,10 @@
 use std::iter;
 
+use aes::{
+    cipher::{consts::U16, generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit},
+    Aes128,
+};
+
 mod ascii {
     const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
 
@@ -228,20 +233,48 @@ pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
     bit_count(&xor_bytes(b0, b1))
 }
 
-pub fn pad_block(bytes: &[u8], size: usize) -> Vec<u8> {
-    let mut bytes = bytes.to_vec();
-    let diff = size % bytes.len();
-    if diff == 0 {
-        return bytes;
+// pad to multiple of size
+pub fn pad_block(bytes: &[u8], mut size: usize) -> Vec<u8> {
+    let len = bytes.len();
+    while size < len {
+        size *= 2;
     }
-    bytes.resize(bytes.len()+diff, diff as u8);
-    assert!(bytes.len() % size == 0);
+    let mut bytes = bytes.to_vec();
+    let diff = size % len;
+    if diff > 0 {
+        bytes.resize(len + diff, diff as u8);
+    }
     bytes
+}
+
+pub fn aes_decrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
+    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
+    let cipher = Aes128::new(&key);
+    let mut blocks = bytes
+        .chunks(key.len())
+        .map(|b| GenericArray::from_slice(b).to_owned())
+        .collect::<Vec<_>>();
+    cipher.decrypt_blocks(blocks.as_mut_slice());
+    blocks.iter().cloned().flatten().collect()
 }
 
 #[cfg(test)]
 mod tests {
     use crate::b64;
+    use crate::pad_block;
+
+    #[test]
+    fn test_pad_block() {
+        assert_eq!(
+            &pad_block(b"YELLOW SUBMARINE", 20),
+            b"YELLOW SUBMARINE\x04\x04\x04\x04"
+        );
+        assert_eq!(
+            &pad_block(b"YELLOW SUBMARINE", 12),
+            b"YELLOW SUBMARINE\x08\x08\x08\x08\x08\x08\x08\x08"
+        );
+        assert_eq!(&pad_block(b"YELLOW SUBMARINE", 16), b"YELLOW SUBMARINE");
+    }
 
     #[test]
     fn test_base64_encode() {
