@@ -10,3 +10,7 @@ aes = "0.8"
 [[bin]]
 name = "set1"
 path = "src/set1.rs"
+
+[[bin]]
+name = "set2"
+path = "src/set2.rs"

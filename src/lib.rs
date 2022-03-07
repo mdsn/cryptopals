@@ -221,15 +221,22 @@ pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, u8, String), String> 
 }
 
 pub fn build_repeated_key(b: &[u8], len: usize) -> Vec<u8> {
-    iter::repeat(b)
-        .flatten()
-        .cloned()
-        .take(len)
-        .collect()
+    iter::repeat(b).flatten().cloned().take(len).collect()
 }
 
 pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
     bit_count(&xor_bytes(b0, b1))
+}
+
+pub fn pad_block(bytes: &[u8], size: usize) -> Vec<u8> {
+    let mut bytes = bytes.to_vec();
+    let diff = size % bytes.len();
+    if diff == 0 {
+        return bytes;
+    }
+    bytes.resize(bytes.len()+diff, diff as u8);
+    assert!(bytes.len() % size == 0);
+    bytes
 }
 
 #[cfg(test)]

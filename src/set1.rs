@@ -1,6 +1,4 @@
 /// The Cryptopals challenges, set 1.
-extern crate cryptopals;
-
 use aes::cipher::generic_array::GenericArray;
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;
