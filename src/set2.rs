@@ -1,7 +1,10 @@
-use std::{io::{BufReader, BufRead}, fs::File};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 /// The Cryptopals challenges, set 2.
-use cryptopals::{aes_decrypt, aes_encrypt, pad_block, remove_padding, b64, aes_decrypt_cbc};
+use cryptopals::{aes_decrypt_cbc, b64, pad_block};
 
 fn challenge9() {
     let b = b"YELLOW SUBMARINE";
@@ -28,6 +31,6 @@ fn challenge10() {
 }
 
 fn main() {
-    // challenge9();
+    challenge9();
     challenge10();
 }

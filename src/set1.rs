@@ -1,8 +1,4 @@
 /// The Cryptopals challenges, set 1.
-use aes::cipher::generic_array::GenericArray;
-use aes::cipher::{BlockDecrypt, KeyInit};
-use aes::Aes128;
-
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};

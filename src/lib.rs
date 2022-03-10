@@ -1,9 +1,8 @@
 use std::iter;
 
-use aes::{
-    cipher::{consts::U16, generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit},
-    Aes128,
-};
+use ::aes::cipher::{BlockDecrypt, BlockEncrypt};
+
+mod aes;
 
 mod ascii {
     const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
@@ -260,39 +259,29 @@ pub fn remove_padding(bytes: &[u8]) -> Vec<u8> {
 }
 
 pub fn aes_decrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
-    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
-    let cipher = Aes128::new(&key);
-    let mut blocks = bytes
-        .chunks(key.len())
-        .map(|b| GenericArray::from_slice(b).to_owned())
-        .collect::<Vec<_>>();
+    let cipher = aes::make_cipher(key);
+    let mut blocks = aes::into_blocks(bytes);
     cipher.decrypt_blocks(blocks.as_mut_slice());
     let blocks: Vec<u8> = blocks.iter().cloned().flatten().collect();
     remove_padding(&blocks)
 }
 
 pub fn aes_encrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
-    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
-    let cipher = Aes128::new(&key);
-    let bytes = pad_block(&bytes, 16);
-    assert_eq!(bytes.len() % 16, 0);
-    let mut blocks: Vec<GenericArray<u8, U16>> = bytes
-        .chunks(key.len())
-        .map(|b| GenericArray::from_slice(b).to_owned())
-        .collect();
+    let cipher = aes::make_cipher(key);
+    let bytes = pad_block(&bytes, aes::KEY_SIZE);
+    let mut blocks = aes::into_blocks(&bytes);
     cipher.encrypt_blocks(blocks.as_mut_slice());
     blocks.iter().cloned().flatten().collect()
 }
 
 pub fn aes_encrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
-    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
-    let cipher = Aes128::new(&key);
-    let bytes = pad_block(&bytes, 16);
+    let cipher = aes::make_cipher(key);
+    let bytes = pad_block(&bytes, aes::KEY_SIZE);
     let mut prev = iv.to_vec();
     let mut enc = Vec::new();
     for block in bytes.chunks(key.len()) {
         let block = xor_bytes(block, &prev);
-        let mut block = GenericArray::from_slice(&block).to_owned();
+        let mut block = aes::make_block(&block);
         cipher.encrypt_block(&mut block);
         let mut block: Vec<u8> = block.iter().cloned().collect();
         prev = block.clone();
@@ -302,14 +291,13 @@ pub fn aes_encrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
 }
 
 pub fn aes_decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
-    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
-    let cipher = Aes128::new(&key);
+    let cipher = aes::make_cipher(key);
     let mut prev = iv.to_vec();
     let mut dec = Vec::new();
-    for block in bytes.chunks(key.len()) {
+    for block in bytes.chunks(aes::KEY_SIZE) {
         let ct = block.clone().to_owned();
         // decrypt
-        let mut block = GenericArray::from_slice(&block).to_owned();
+        let mut block = aes::make_block(block);
         cipher.decrypt_block(&mut block);
         // xor with prev
         let block: Vec<u8> = block.iter().cloned().collect();
