@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes};
+use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex};
 
 use cryptopals::aes;
+use cryptopals::xor::xor_bytes;
 
 fn challenge1() {
     let bytes = hex::parse(
