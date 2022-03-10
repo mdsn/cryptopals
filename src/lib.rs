@@ -243,7 +243,19 @@ pub fn pad_block(bytes: &[u8], mut size: usize) -> Vec<u8> {
     let diff = size % len;
     if diff > 0 {
         bytes.resize(len + diff, diff as u8);
+    } else {
+        bytes.resize(len + size, size as u8);
     }
+    bytes
+}
+
+pub fn remove_padding(bytes: &[u8]) -> Vec<u8> {
+    if bytes.len() == 0 {
+        return vec![];
+    }
+    let mut bytes = bytes.to_vec();
+    let last_byte = *bytes.last().unwrap() as usize;
+    bytes.truncate(bytes.len() - last_byte);
     bytes
 }
 
@@ -255,13 +267,79 @@ pub fn aes_decrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
         .map(|b| GenericArray::from_slice(b).to_owned())
         .collect::<Vec<_>>();
     cipher.decrypt_blocks(blocks.as_mut_slice());
+    let blocks: Vec<u8> = blocks.iter().cloned().flatten().collect();
+    remove_padding(&blocks)
+}
+
+pub fn aes_encrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
+    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
+    let cipher = Aes128::new(&key);
+    let bytes = pad_block(&bytes, 16);
+    assert_eq!(bytes.len() % 16, 0);
+    let mut blocks: Vec<GenericArray<u8, U16>> = bytes
+        .chunks(key.len())
+        .map(|b| GenericArray::from_slice(b).to_owned())
+        .collect();
+    cipher.encrypt_blocks(blocks.as_mut_slice());
     blocks.iter().cloned().flatten().collect()
+}
+
+pub fn aes_encrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
+    let cipher = Aes128::new(&key);
+    let bytes = pad_block(&bytes, 16);
+    let mut prev = iv.to_vec();
+    let mut enc = Vec::new();
+    for block in bytes.chunks(key.len()) {
+        let block = xor_bytes(block, &prev);
+        let mut block = GenericArray::from_slice(&block).to_owned();
+        cipher.encrypt_block(&mut block);
+        let mut block: Vec<u8> = block.iter().cloned().collect();
+        prev = block.clone();
+        enc.append(&mut block);
+    }
+    enc
+}
+
+pub fn aes_decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    let key: &GenericArray<_, U16> = GenericArray::from_slice(key);
+    let cipher = Aes128::new(&key);
+    let mut prev = iv.to_vec();
+    let mut dec = Vec::new();
+    for block in bytes.chunks(key.len()) {
+        let ct = block.clone().to_owned();
+        // decrypt
+        let mut block = GenericArray::from_slice(&block).to_owned();
+        cipher.decrypt_block(&mut block);
+        // xor with prev
+        let block: Vec<u8> = block.iter().cloned().collect();
+        let mut block = xor_bytes(&block, &prev);
+        // prev <- ct clone
+        dec.append(&mut block);
+        prev = ct;
+    }
+    dec
 }
 
 #[cfg(test)]
 mod tests {
     use crate::b64;
     use crate::pad_block;
+    use crate::{aes_decrypt, aes_encrypt};
+
+    #[test]
+    fn test_aes_encrypt_decrypt() {
+        let key = b"YELLOW SUBMARINE";
+        let pt = b"OSTENSIBLY, YES";
+        let enc = aes_encrypt(pt, key);
+        let dec = aes_decrypt(&enc, key);
+        assert_eq!(dec, pt);
+
+        let pt = b"YELLOW SUBMARINE";
+        let enc = aes_encrypt(pt, key);
+        let dec = aes_decrypt(&enc, key);
+        assert_eq!(dec, pt);
+    }
 
     #[test]
     fn test_pad_block() {
@@ -273,7 +351,10 @@ mod tests {
             &pad_block(b"YELLOW SUBMARINE", 12),
             b"YELLOW SUBMARINE\x08\x08\x08\x08\x08\x08\x08\x08"
         );
-        assert_eq!(&pad_block(b"YELLOW SUBMARINE", 16), b"YELLOW SUBMARINE");
+        assert_eq!(
+            &pad_block(b"YELLOW SUBMARINE", 16),
+            b"YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10" // YELLOW SUBMARINE + 16 "16" bytes
+        );
     }
 
     #[test]
