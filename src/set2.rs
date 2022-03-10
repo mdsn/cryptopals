@@ -3,12 +3,13 @@ use std::{
     io::{BufRead, BufReader},
 };
 
+use cryptopals::pad;
 /// The Cryptopals challenges, set 2.
-use cryptopals::{aes_decrypt_cbc, b64, pad_block};
+use cryptopals::{aes_decrypt_cbc, b64};
 
 fn challenge9() {
     let b = b"YELLOW SUBMARINE";
-    let padded = pad_block(b, 20);
+    let padded = pad::pad_block(b, 20);
     assert_eq!(&padded, b"YELLOW SUBMARINE\x04\x04\x04\x04");
 }
 

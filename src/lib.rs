@@ -2,7 +2,8 @@ use std::iter;
 
 use ::aes::cipher::{BlockDecrypt, BlockEncrypt};
 
-mod aes;
+pub mod aes;
+pub mod pad;
 
 mod ascii {
     const ASCII: &str = "abcdefghijklmnopqrstuvwxyz ";
@@ -232,51 +233,9 @@ pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
     bit_count(&xor_bytes(b0, b1))
 }
 
-// pad to multiple of size
-pub fn pad_block(bytes: &[u8], mut size: usize) -> Vec<u8> {
-    let len = bytes.len();
-    while size < len {
-        size *= 2;
-    }
-    let mut bytes = bytes.to_vec();
-    let diff = size % len;
-    if diff > 0 {
-        bytes.resize(len + diff, diff as u8);
-    } else {
-        bytes.resize(len + size, size as u8);
-    }
-    bytes
-}
-
-pub fn remove_padding(bytes: &[u8]) -> Vec<u8> {
-    if bytes.len() == 0 {
-        return vec![];
-    }
-    let mut bytes = bytes.to_vec();
-    let last_byte = *bytes.last().unwrap() as usize;
-    bytes.truncate(bytes.len() - last_byte);
-    bytes
-}
-
-pub fn aes_decrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
-    let cipher = aes::make_cipher(key);
-    let mut blocks = aes::into_blocks(bytes);
-    cipher.decrypt_blocks(blocks.as_mut_slice());
-    let blocks: Vec<u8> = blocks.iter().cloned().flatten().collect();
-    remove_padding(&blocks)
-}
-
-pub fn aes_encrypt(bytes: &[u8], key: &[u8]) -> Vec<u8> {
-    let cipher = aes::make_cipher(key);
-    let bytes = pad_block(&bytes, aes::KEY_SIZE);
-    let mut blocks = aes::into_blocks(&bytes);
-    cipher.encrypt_blocks(blocks.as_mut_slice());
-    blocks.iter().cloned().flatten().collect()
-}
-
 pub fn aes_encrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let cipher = aes::make_cipher(key);
-    let bytes = pad_block(&bytes, aes::KEY_SIZE);
+    let bytes = pad::pad_block(&bytes, aes::KEY_SIZE);
     let mut prev = iv.to_vec();
     let mut enc = Vec::new();
     for block in bytes.chunks(key.len()) {
@@ -312,38 +271,6 @@ pub fn aes_decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use crate::b64;
-    use crate::pad_block;
-    use crate::{aes_decrypt, aes_encrypt};
-
-    #[test]
-    fn test_aes_encrypt_decrypt() {
-        let key = b"YELLOW SUBMARINE";
-        let pt = b"OSTENSIBLY, YES";
-        let enc = aes_encrypt(pt, key);
-        let dec = aes_decrypt(&enc, key);
-        assert_eq!(dec, pt);
-
-        let pt = b"YELLOW SUBMARINE";
-        let enc = aes_encrypt(pt, key);
-        let dec = aes_decrypt(&enc, key);
-        assert_eq!(dec, pt);
-    }
-
-    #[test]
-    fn test_pad_block() {
-        assert_eq!(
-            &pad_block(b"YELLOW SUBMARINE", 20),
-            b"YELLOW SUBMARINE\x04\x04\x04\x04"
-        );
-        assert_eq!(
-            &pad_block(b"YELLOW SUBMARINE", 12),
-            b"YELLOW SUBMARINE\x08\x08\x08\x08\x08\x08\x08\x08"
-        );
-        assert_eq!(
-            &pad_block(b"YELLOW SUBMARINE", 16),
-            b"YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10" // YELLOW SUBMARINE + 16 "16" bytes
-        );
-    }
 
     #[test]
     fn test_base64_encode() {

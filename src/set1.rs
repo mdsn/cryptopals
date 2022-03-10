@@ -3,7 +3,9 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes, aes_decrypt};
+use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex, xor_bytes};
+
+use cryptopals::aes;
 
 fn challenge1() {
     let bytes = hex::parse(
@@ -125,7 +127,7 @@ fn challenge6() {
 fn challenge7() {
     let key = b"YELLOW SUBMARINE";
     let bytes = b64::decode(&read_concat_lines("7.txt")).unwrap();
-    let bytes = aes_decrypt(&bytes, key);
+    let bytes = aes::decrypt_ecb(&bytes, key);
     let pt = String::from_utf8(bytes).unwrap();
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
