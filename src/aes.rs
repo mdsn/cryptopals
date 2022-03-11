@@ -81,6 +81,7 @@ pub fn decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     }
     dec
 }
+
 #[cfg(test)]
 mod tests {
     use super::{decrypt_ecb, encrypt_ecb};

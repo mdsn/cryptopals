@@ -4,6 +4,7 @@ pub mod aes;
 pub mod b64;
 pub mod hex;
 pub mod pad;
+pub mod rand;
 pub mod xor;
 
 mod ascii {
@@ -65,6 +66,4 @@ pub fn hamming(b0: &[u8], b1: &[u8]) -> u32 {
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}
