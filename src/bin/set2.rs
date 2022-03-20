@@ -124,45 +124,59 @@ fn challenge12() {
 
     let enc = prepend_encrypt_ecb(&plaintext, &unknown, &key);
     let guessed_keysize = find_xor_key_size(&enc);
-    info!("challenge12: guessed keysize {}", guessed_keysize);
+    debug!("challenge12: guessed keysize {}", guessed_keysize);
     assert_eq!(guessed_keysize, aes::KEY_SIZE);
 
     let guessed_mode = detection_oracle(&enc);
-    info!("challenge12: guessed mode {:?}", guessed_mode);
+    debug!("challenge12: guessed mode {:?}", guessed_mode);
     assert_eq!(guessed_mode, aes::CipherMode::ECB);
 
     let mut input = vec![b'A'; guessed_keysize - 1];
     let mut dict = HashMap::new();
+    let mut decrypted_blocks: Vec<_> = Vec::new();
 
-    for j in 1..guessed_keysize {
-        for i in 0..=255u8 {
-            let mut block: Vec<u8> = input.clone();
-            block.push(i);
-            let mut enc = prepend_encrypt_ecb(&block, &unknown[j..], &key);
+    for unknown_chunk in unknown.chunks(guessed_keysize) {
+        let len = unknown_chunk.len();
+        let mut block = Vec::with_capacity(len);
+        for j in 0..len {
+            // create dict from ct to pt. Each block also has all bytes discovered so far and collected in input
+            for i in 0..=255u8 {
+                let mut block: Vec<u8> = input.clone();
+                block.push(i);
+                let mut enc = prepend_encrypt_ecb(&block, &unknown_chunk[j..], &key);
+                enc.truncate(guessed_keysize);
+                dict.insert(enc, block);
+            }
+
+            // encrypt unknown_chunk subsequent tails to guess one head byte at a time
+            let mut enc = prepend_encrypt_ecb(&input, &unknown_chunk[j..], &key);
             enc.truncate(guessed_keysize);
-            dict.insert(enc, block);
+
+            // get the plaintext
+            let plaintext = dict.remove(&enc).unwrap();
+            let byte = plaintext[guessed_keysize - 1];
+
+            // no need to store last byte, there is nothing else to search
+            debug!("challenge12: j {}", j);
+            if j < len - 1 {
+                input[guessed_keysize - 1 - (j + 1)] = byte;
+            }
+
+            dict.clear();
+            block.push(byte);
+
+            debug!(
+                "challenge12: byte {} of unknown found: {} / input {:?}",
+                j, byte, input
+            );
         }
 
-        let mut enc = prepend_encrypt_ecb(&input, &unknown[j..], &key);
-        enc.truncate(guessed_keysize);
-        let plaintext = dict.remove(&enc).unwrap();
-        let byte = plaintext[guessed_keysize - 1];
-        input[guessed_keysize - 1 - j] = byte;
-        info!(
-            "challenge12: byte {} of unknown found: {} / input {:?}",
-            j, byte, input
-        );
-
-        dict.clear();
+        debug!("challenge12: {:?}", String::from_utf8_lossy(&block));
+        decrypted_blocks.append(&mut block);
     }
 
-    let mut block = input.clone();
-    block.reverse();
-    info!(
-        "challenge12: first block of plaintext {:?} -> {}",
-        block,
-        String::from_utf8_lossy(&block)
-    );
+    let plaintext = String::from_utf8_lossy(&decrypted_blocks);
+    info!("challenge12:\n{}", plaintext);
 }
 
 fn main() {
