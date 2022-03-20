@@ -1,5 +1,4 @@
 /// The Cryptopals challenges, set 1.
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -40,11 +39,10 @@ fn challenge4() {
     let mut scores: Vec<_> = BufReader::new(txt)
         .lines()
         .flatten()
-        .map(|line| {
+        .flat_map(|line| {
             let bytes = hex::parse(line).unwrap();
             break_single_byte_xor(&bytes)
         })
-        .flatten()
         .collect();
     scores.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
     assert_eq!("Now that the party is jumping\n", scores[0].2)
@@ -73,7 +71,7 @@ fn find_xor_key_size(bytes: &[u8]) -> usize {
                 dist += hamming(chunks[i], chunks[j]) as f32;
             }
         }
-        dist = dist / candidate as f32;
+        dist /= candidate as f32;
         if dist < mindist {
             keysize = candidate;
             mindist = dist;
@@ -133,28 +131,13 @@ fn challenge7() {
     assert!(pt.starts_with("I'm back and I'm ringin' the bell"));
 }
 
-fn detect_ecb(bytes: &[u8], block_size: usize) -> bool {
-    if bytes.len() % block_size != 0 {
-        panic!("detect_ecb: bytes len not multiple of block_size");
-    }
-    let mut seen = HashSet::new();
-    for block in bytes.chunks(block_size) {
-        let bs = block.to_vec();
-        if seen.contains(&bs) {
-            return true;
-        }
-        seen.insert(bs);
-    }
-    false
-}
-
 fn challenge8() {
     let lines = BufReader::new(File::open("8.txt").unwrap())
         .lines()
         .flatten()
-        .flat_map(|s| hex::parse(s));
+        .flat_map(hex::parse);
     for (i, bytes) in lines.enumerate() {
-        if detect_ecb(&bytes, 16) {
+        if aes::detect_ecb(&bytes) {
             assert_eq!(i, 132);
         }
     }

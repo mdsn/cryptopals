@@ -48,7 +48,7 @@ impl Xoshiro256 {
         Xoshiro256 { state }
     }
 
-    pub fn next(&mut self) -> u64 {
+    pub fn next_num(&mut self) -> u64 {
         let res = mul(rotl(mul(self.state[1], 5), 7), 9);
         let t = self.state[1] << 17;
 
@@ -65,7 +65,7 @@ impl Xoshiro256 {
     }
 
     pub fn get_bytes(&mut self, n: u64) -> Vec<u8> {
-        (0..n).map(|_| self.next() as u8).collect()
+        (0..n).map(|_| self.next_num() as u8).collect()
     }
 
     // Random number in the range [0..range)
@@ -76,7 +76,7 @@ impl Xoshiro256 {
         mask >>= (range | 1).leading_zeros();
         let mut x: u64;
         loop {
-            x = self.next() & mask;
+            x = self.next_num() & mask;
             if x <= range {
                 break;
             }

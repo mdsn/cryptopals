@@ -15,7 +15,7 @@ pub fn pad_block(bytes: &[u8], mut size: usize) -> Vec<u8> {
 }
 
 pub fn remove_padding(bytes: &[u8]) -> Vec<u8> {
-    if bytes.len() == 0 {
+    if bytes.is_empty() {
         return vec![];
     }
     let mut bytes = bytes.to_vec();

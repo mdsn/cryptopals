@@ -3,6 +3,7 @@ use aes::{
     cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt},
     Aes128,
 };
+use std::collections::HashSet;
 
 use crate::pad;
 use crate::xor::xor_bytes;
@@ -11,6 +12,12 @@ pub const KEY_SIZE: usize = 16;
 
 type Key = GenericArray<u8, U16>;
 pub type Block = GenericArray<u8, U16>;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum CipherMode {
+    ECB,
+    CBC,
+}
 
 fn make_key(bytes: &[u8]) -> Key {
     GenericArray::clone_from_slice(bytes)
@@ -28,12 +35,12 @@ pub fn make_block(bytes: &[u8]) -> Block {
 
 /// Break a slice of bytes into GenericArrays of size 16 that Aes128 can use.
 pub fn into_blocks(bytes: &[u8]) -> Vec<Block> {
-    bytes.chunks(16).map(|b| make_block(b)).collect()
+    bytes.chunks(16).map(make_block).collect()
 }
 
 pub fn encrypt_ecb(bytes: &[u8], key: &[u8]) -> Vec<u8> {
     let cipher = make_cipher(key);
-    let bytes = pad::pad_block(&bytes, KEY_SIZE);
+    let bytes = pad::pad_block(bytes, KEY_SIZE);
     let mut blocks = into_blocks(&bytes);
     cipher.encrypt_blocks(blocks.as_mut_slice());
     blocks.iter().cloned().flatten().collect()
@@ -49,7 +56,7 @@ pub fn decrypt_ecb(bytes: &[u8], key: &[u8]) -> Vec<u8> {
 
 pub fn encrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let cipher = make_cipher(key);
-    let bytes = pad::pad_block(&bytes, KEY_SIZE);
+    let bytes = pad::pad_block(bytes, KEY_SIZE);
     let mut prev = iv.to_vec();
     let mut enc = Vec::new();
     for block in bytes.chunks(key.len()) {
@@ -68,7 +75,7 @@ pub fn decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let mut prev = iv.to_vec();
     let mut dec = Vec::new();
     for block in bytes.chunks(KEY_SIZE) {
-        let ct = block.clone().to_owned();
+        let ct = block.to_vec();
         // decrypt
         let mut block = make_block(block);
         cipher.decrypt_block(&mut block);
@@ -80,6 +87,21 @@ pub fn decrypt_cbc(bytes: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
         prev = ct;
     }
     dec
+}
+
+pub fn detect_ecb(bytes: &[u8]) -> bool {
+    if bytes.len() % KEY_SIZE != 0 {
+        panic!("detect_ecb: bytes len not multiple of block_size");
+    }
+    let mut seen = HashSet::new();
+    for block in bytes.chunks(KEY_SIZE) {
+        // let bs = block.to_vec();
+        if seen.contains(block) {
+            return true;
+        }
+        seen.insert(block);
+    }
+    false
 }
 
 #[cfg(test)]
