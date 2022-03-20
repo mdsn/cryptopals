@@ -131,24 +131,37 @@ fn challenge12() {
     info!("challenge12: guessed mode {:?}", guessed_mode);
     assert_eq!(guessed_mode, aes::CipherMode::ECB);
 
-    let input = vec![b'A'; guessed_keysize - 1];
-
-    // maps a block of ciphertext to plaintext
+    let mut input = vec![b'A'; guessed_keysize - 1];
     let mut dict = HashMap::new();
-    for i in 0..=255u8 {
-        let mut block: Vec<u8> = input.clone();
-        block.push(i);
-        let mut enc = prepend_encrypt_ecb(&block, &unknown, &key);
+
+    for j in 1..guessed_keysize {
+        for i in 0..=255u8 {
+            let mut block: Vec<u8> = input.clone();
+            block.push(i);
+            let mut enc = prepend_encrypt_ecb(&block, &unknown[j..], &key);
+            enc.truncate(guessed_keysize);
+            dict.insert(enc, block);
+        }
+
+        let mut enc = prepend_encrypt_ecb(&input, &unknown[j..], &key);
         enc.truncate(guessed_keysize);
-        dict.insert(enc, block);
+        let plaintext = dict.remove(&enc).unwrap();
+        let byte = plaintext[guessed_keysize - 1];
+        input[guessed_keysize - 1 - j] = byte;
+        info!(
+            "challenge12: byte {} of unknown found: {} / input {:?}",
+            j, byte, input
+        );
+
+        dict.clear();
     }
 
-    let mut enc = prepend_encrypt_ecb(&input, &unknown, &key);
-    enc.truncate(guessed_keysize);
-    let plaintext = dict.get(&enc).unwrap();
+    let mut block = input.clone();
+    block.reverse();
     info!(
-        "challenge12: first byte of unknown: {}",
-        plaintext.last().unwrap()
+        "challenge12: first block of plaintext {:?} -> {}",
+        block,
+        String::from_utf8_lossy(&block)
     );
 }
 
