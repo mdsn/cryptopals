@@ -124,7 +124,7 @@ mod tests {
     fn test_xoshiro256ss() {
         // test vectors: https://github.com/Quuxplusone/Xoshiro256ss
         let mut prng = Xoshiro256::new(100u64);
-        let numbers: Vec<u64> = (0..4).map(|_| prng.next()).collect();
+        let numbers: Vec<u64> = (0..4).map(|_| prng.next_num()).collect();
         assert_eq!(
             numbers,
             vec![
