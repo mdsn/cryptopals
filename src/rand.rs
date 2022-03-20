@@ -90,6 +90,23 @@ impl Xoshiro256 {
     }
 }
 
+fn make_seed() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64
+}
+
+pub fn make_prng() -> Xoshiro256 {
+    Xoshiro256::new(make_seed())
+}
+
+pub fn bytes(n: u64) -> Vec<u8> {
+    let mut prng = make_prng();
+    prng.get_bytes(n)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{SplitMix64, Xoshiro256};

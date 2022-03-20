@@ -1,10 +1,12 @@
+#[macro_use]
+extern crate log;
+
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
 
 use cryptopals::aes;
-/// The Cryptopals challenges, set 2.
 use cryptopals::b64;
 use cryptopals::pad;
 use cryptopals::rand;
@@ -33,17 +35,9 @@ fn challenge10() {
     assert!(s.starts_with("I'm back and I'm ringin' the bell"));
 }
 
-fn make_seed() -> u64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64
-}
-
 // Encrypt bytes under a random key
 fn encryption_oracle(bytes: &[u8]) -> (aes::CipherMode, Vec<u8>) {
-    let mut prng = rand::Xoshiro256::new(make_seed());
+    let mut prng = rand::make_prng();
     // prepend and append 5 to 10 random bytes
     let (lo, hi) = (prng.range(5) + 5, prng.range(5) + 5);
     let bytes: Vec<u8> = prng
@@ -71,30 +65,45 @@ fn detection_oracle(bytes: &[u8]) -> aes::CipherMode {
 }
 
 fn challenge11() {
-    let pt = b"Honestly, we hacked most of it together with Perl.";
+    let plaintext = rand::bytes(16 * 64);
 
     let mut matches: u32 = 0;
-    let mut ecb_wrong: u32 = 0; // oracle said ecb and was wrong
-    let mut cbc_wrong: u32 = 0; // oracle said cbc and was wrong
+    let mut ecb_failed: u32 = 0; // failed to detect ecb
+    let mut cbc_failed: u32 = 0; // failed to detect cbc
+    let mut total_cbc: u32 = 0;
 
-    for _ in 0..=1000 {
-        let (mode, bytes) = encryption_oracle(pt);
+    const RUNS: u32 = 100;
+
+    for _ in 0..RUNS {
+        let (mode, bytes) = encryption_oracle(&plaintext);
+        if mode == aes::CipherMode::CBC {
+            total_cbc += 1;
+        }
+
         if detection_oracle(&bytes) == mode {
             matches += 1;
         } else if mode == aes::CipherMode::CBC {
-            ecb_wrong += 1;
+            cbc_failed += 1;
         } else {
-            cbc_wrong += 1;
+            ecb_failed += 1;
         }
     }
-    let percent: f32 = matches as f32 / 10.0;
-    println!(
-        "{} matches out of 1000 ({}%) / cbc wrong {} / ecb wrong {}",
-        matches, percent, cbc_wrong, ecb_wrong
+
+    info!(
+        "challenge11: {} matches out of {} ({}%) / failed to detect cbc:ebc {}:{} / cbc:ecb {}:{}",
+        matches,
+        RUNS,
+        matches as f32 / 10.0,
+        cbc_failed,
+        ecb_failed,
+        total_cbc,
+        RUNS - total_cbc
     );
 }
 
 fn main() {
+    env_logger::init();
+
     challenge9();
     challenge10();
     challenge11();
