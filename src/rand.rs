@@ -115,7 +115,7 @@ mod tests {
     fn test_splitmix64() {
         let seed = 54321u64;
         let mut mix = SplitMix64::new(seed);
-        for i in 0..5 {
+        for _ in 0..5 {
             println!("{}", mix.next());
         }
     }

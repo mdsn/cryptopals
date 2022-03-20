@@ -2,7 +2,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use cryptopals::{b64, break_single_byte_xor, build_repeated_key, hamming, hex};
+use cryptopals::{b64, break_single_byte_xor, build_repeated_key, find_xor_key_size, hamming, hex};
 
 use cryptopals::aes;
 use cryptopals::xor::xor_bytes;
@@ -58,26 +58,6 @@ fn challenge5() {
         "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272\
          a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
     );
-}
-
-fn find_xor_key_size(bytes: &[u8]) -> usize {
-    let mut mindist = f32::MAX;
-    let mut keysize: usize = 0;
-    for candidate in 2..=40 {
-        let chunks: Vec<_> = bytes.chunks(candidate).take(4).collect();
-        let mut dist = 0f32;
-        for i in 0..4 {
-            for j in 0..4 {
-                dist += hamming(chunks[i], chunks[j]) as f32;
-            }
-        }
-        dist /= candidate as f32;
-        if dist < mindist {
-            keysize = candidate;
-            mindist = dist;
-        }
-    }
-    keysize
 }
 
 fn find_repxor_key(bytes: &[u8], keysize: usize) -> Result<Vec<u8>, String> {

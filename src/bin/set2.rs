@@ -2,14 +2,15 @@
 extern crate log;
 
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
 
-use cryptopals::aes;
 use cryptopals::b64;
 use cryptopals::pad;
 use cryptopals::rand;
+use cryptopals::{aes, find_xor_key_size};
 
 fn challenge9() {
     let b = b"YELLOW SUBMARINE";
@@ -65,7 +66,7 @@ fn detection_oracle(bytes: &[u8]) -> aes::CipherMode {
 }
 
 fn challenge11() {
-    let plaintext = rand::bytes(16 * 64);
+    let plaintext = rand::bytes(1024);
 
     let mut matches: u32 = 0;
     let mut ecb_failed: u32 = 0; // failed to detect ecb
@@ -101,10 +102,61 @@ fn challenge11() {
     );
 }
 
+fn prepend_encrypt_ecb(plaintext: &[u8], unknown: &[u8], key: &[u8]) -> Vec<u8> {
+    let manipulated: Vec<u8> = plaintext
+        .iter()
+        .cloned()
+        .chain(unknown.iter().cloned())
+        .collect();
+    aes::encrypt_ecb(&manipulated, key)
+}
+
+fn challenge12() {
+    let key = rand::bytes(aes::KEY_SIZE as u64);
+    let plaintext = Vec::from([b'A'; 128]);
+    let unknown = b64::decode(
+        "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
+        aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
+        dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
+        YnkK",
+    )
+    .unwrap();
+
+    let enc = prepend_encrypt_ecb(&plaintext, &unknown, &key);
+    let guessed_keysize = find_xor_key_size(&enc);
+    info!("challenge12: guessed keysize {}", guessed_keysize);
+    assert_eq!(guessed_keysize, aes::KEY_SIZE);
+
+    let guessed_mode = detection_oracle(&enc);
+    info!("challenge12: guessed mode {:?}", guessed_mode);
+    assert_eq!(guessed_mode, aes::CipherMode::ECB);
+
+    let input = vec![b'A'; guessed_keysize - 1];
+
+    // maps a block of ciphertext to plaintext
+    let mut dict = HashMap::new();
+    for i in 0..=255u8 {
+        let mut block: Vec<u8> = input.clone();
+        block.push(i);
+        let mut enc = prepend_encrypt_ecb(&block, &unknown, &key);
+        enc.truncate(guessed_keysize);
+        dict.insert(enc, block);
+    }
+
+    let mut enc = prepend_encrypt_ecb(&input, &unknown, &key);
+    enc.truncate(guessed_keysize);
+    let plaintext = dict.get(&enc).unwrap();
+    info!(
+        "challenge12: first byte of unknown: {}",
+        plaintext.last().unwrap()
+    );
+}
+
 fn main() {
     env_logger::init();
 
     challenge9();
     challenge10();
     challenge11();
+    challenge12();
 }

@@ -57,6 +57,26 @@ pub fn break_single_byte_xor(bytes: &[u8]) -> Result<(f32, u8, String), String> 
     }
 }
 
+pub fn find_xor_key_size(bytes: &[u8]) -> usize {
+    let mut mindist = f32::MAX;
+    let mut keysize: usize = 0;
+    for candidate in 2..=40 {
+        let chunks: Vec<_> = bytes.chunks(candidate).take(4).collect();
+        let mut dist = 0f32;
+        for i in 0..4 {
+            for j in 0..4 {
+                dist += hamming(chunks[i], chunks[j]) as f32;
+            }
+        }
+        dist /= candidate as f32;
+        if dist < mindist {
+            keysize = candidate;
+            mindist = dist;
+        }
+    }
+    keysize
+}
+
 pub fn build_repeated_key(b: &[u8], len: usize) -> Vec<u8> {
     iter::repeat(b).flatten().cloned().take(len).collect()
 }
