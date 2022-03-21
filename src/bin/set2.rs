@@ -133,11 +133,10 @@ fn challenge12() {
 
     let mut input = vec![b'A'; guessed_keysize - 1];
     let mut dict = HashMap::new();
-    let mut decrypted_blocks: Vec<_> = Vec::new();
+    let mut decrypted: Vec<_> = Vec::new();
 
     for unknown_chunk in unknown.chunks(guessed_keysize) {
         let len = unknown_chunk.len();
-        let mut block = Vec::with_capacity(len);
         for j in 0..len {
             // create dict from ct to pt. Each block also has all bytes discovered so far and collected in input
             for i in 0..=255u8 {
@@ -149,33 +148,28 @@ fn challenge12() {
             }
 
             // encrypt unknown_chunk subsequent tails to guess one head byte at a time
-            let mut enc = prepend_encrypt_ecb(&input, &unknown_chunk[j..], &key);
-            enc.truncate(guessed_keysize);
+            let enc = &prepend_encrypt_ecb(&input, &unknown_chunk[j..], &key)[..guessed_keysize];
 
             // get the plaintext
-            let plaintext = dict.remove(&enc).unwrap();
+            let plaintext = dict.remove(enc).unwrap();
             let byte = plaintext[guessed_keysize - 1];
 
             // no need to store last byte, there is nothing else to search
-            debug!("challenge12: j {}", j);
             if j < len - 1 {
                 input[guessed_keysize - 1 - (j + 1)] = byte;
             }
 
             dict.clear();
-            block.push(byte);
+            decrypted.push(byte);
 
             debug!(
                 "challenge12: byte {} of unknown found: {} / input {:?}",
                 j, byte, input
             );
         }
-
-        debug!("challenge12: {:?}", String::from_utf8_lossy(&block));
-        decrypted_blocks.append(&mut block);
     }
 
-    let plaintext = String::from_utf8_lossy(&decrypted_blocks);
+    let plaintext = String::from_utf8_lossy(&decrypted);
     info!("challenge12:\n{}", plaintext);
 }
 
